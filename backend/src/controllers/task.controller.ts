@@ -115,3 +115,42 @@ export const deleteTask = async (req: AuthRequest, res: Response) => {
   await task.deleteOne();
   res.json({ message: "Task deleted" });
 };
+
+export const assignUserToTask = async (req: AuthRequest, res: Response) => {
+  const taskId = Array.isArray(req.params.taskId)
+    ? req.params.taskId[0]
+    : req.params.taskId;
+  const { userId } = req.body;
+
+  if (!mongoose.Types.ObjectId.isValid(taskId)) {
+    return res.status(400).json({ message: "Invalid task ID" });
+  }
+
+  const task = await Task.findById(taskId).populate("project");
+  if (!task) return res.status(404).json({ message: "Task not found" });
+
+  const project = await Project.findById(task.project);
+  if (!project) return res.status(404).json({ message: "Project not found" });
+
+  // If userId is provided, check validity and membership
+  if (userId) {
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ message: "Invalid user ID" });
+    }
+    if (!project.members.some((id) => id.toString() === userId)) {
+      return res.status(403).json({ message: "User not in project" });
+    }
+    task.assignedTo = userId;
+  } else {
+    // Unassign user
+    task.assignedTo = null;
+  }
+
+  await task.save();
+
+  res.json({
+    message: userId ? "User assigned to task" : "User unassigned from task",
+    taskId: task._id,
+    assignedTo: task.assignedTo,
+  });
+};
