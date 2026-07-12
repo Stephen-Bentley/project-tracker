@@ -15,3 +15,11 @@ export const getProjectById = async (projectId: string): Promise<Project> => {
   const res = await api.get<Project>(`/projects/${projectId}`);
   return res.data;
 };
+
+export const addUserToProject = async (projectId: string, userId: string) => {
+  await api.post(`/projects/${projectId}/users`, { userId });
+};
+
+export const removeUserFromProject = async (projectId: string, userId: string) => {
+  await api.delete(`/projects/${projectId}/users/${userId}`);
+};

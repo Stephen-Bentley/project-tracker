@@ -35,6 +35,9 @@ const Navigation: React.FC<NavigationProps> = ({ isAdmin }) => {
           <NavLink to="/projects" style={linkStyle}>
             Projects
           </NavLink>
+          <NavLink to="/profile" style={linkStyle}>
+            Profile
+          </NavLink>
           {isAdmin && (
             <NavLink to="/admin/projects" style={linkStyle}>
               Admin

@@ -1,21 +1,30 @@
-import React from "react";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import Login from "./pages/Login";
-import Dashboard from "./pages/Dashboard";
-import Projects from "./pages/Projects";
-import ProjectBoard from "./pages/ProjectBoard";
-import AdminProjectsPage from "./pages/AdminProjects";
-import Navigation from "./components/Navigation";
+import React, { useEffect, useState } from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import Login from './pages/Login';
+import Dashboard from './pages/Dashboard';
+import Projects from './pages/Projects';
+import ProjectBoard from './pages/ProjectBoard';
+import AdminProjectsPage from './pages/AdminProjects';
+import Navigation from './components/Navigation';
+import Profile from './pages/Profile';
 
 const App: React.FC = () => {
+  const [darkMode, setDarkMode] = useState(
+    () => localStorage.getItem('theme') === 'dark'
+  );
   // Grab token and role from localStorage
-  const token = localStorage.getItem("token");
-  const role = localStorage.getItem("role"); // 'admin' or 'user'
+  const token = localStorage.getItem('token');
+  const role = localStorage.getItem('role'); // 'admin' or 'user'
   const isAuthenticated = !!token;
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = darkMode ? 'dark' : 'light';
+    localStorage.setItem('theme', darkMode ? 'dark' : 'light');
+  }, [darkMode]);
 
   return (
     <BrowserRouter>
-      {isAuthenticated && <Navigation isAdmin={role === "admin"} />}
+      {isAuthenticated && <Navigation isAdmin={role === 'admin'} />}
       <Routes>
         {/* Login Page */}
         <Route
@@ -43,8 +52,19 @@ const App: React.FC = () => {
           }
         />
 
+        <Route
+          path="/profile"
+          element={
+            isAuthenticated ? (
+              <Profile darkMode={darkMode} onThemeChange={setDarkMode} />
+            ) : (
+              <Navigate to="/login" />
+            )
+          }
+        />
+
         {/* Admin Projects Page */}
-        {role === "admin" && (
+        {role === 'admin' && (
           <Route
             path="/admin/projects"
             element={

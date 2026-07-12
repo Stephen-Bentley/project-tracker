@@ -3,6 +3,7 @@ import { getMyProjects } from '../api/projects';
 import { Project } from '../types/projects';
 import ProjectCard from '../components/ProjectCard';
 import { useNavigate } from 'react-router-dom';
+import './Projects.css';
 
 const Projects: React.FC = () => {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -28,13 +29,13 @@ const Projects: React.FC = () => {
   if (loading) return <p style={{ padding: 24 }}>Loading projects...</p>;
 
   return (
-    <div style={{ padding: 24 }}>
-      <h1 style={{ color: '#16a34a' }}>My Projects</h1>
+    <main className="projects-page">
+      <h1>My Projects</h1>
 
       {projects.length === 0 && <p>No projects yet.</p>}
 
-      <div style={styles.grid}>
-        {projects.map(project => (
+      <div className="projects-grid">
+        {projects.map((project) => (
           <ProjectCard
             key={project._id}
             project={project}
@@ -42,17 +43,8 @@ const Projects: React.FC = () => {
           />
         ))}
       </div>
-    </div>
+    </main>
   );
-};
-
-const styles: Record<string, React.CSSProperties> = {
-  grid: {
-    marginTop: 20,
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
-    gap: 20
-  }
 };
 
 export default Projects;

@@ -1,24 +1,25 @@
-import React, { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import React, { useEffect, useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import {
   DragDropContext,
   Droppable,
   Draggable,
   DropResult,
-} from "@hello-pangea/dnd";
+} from '@hello-pangea/dnd';
 
-import { Task, TaskStatus } from "../types/task";
-import { User } from "../types/index";
+import { Task, TaskStatus } from '../types/task';
+import { User } from '../types/index';
 import {
   getTasksByProject,
   createTask,
   updateTaskStatus,
   assignUserToTask,
-} from "../api/tasks";
-import { getProjectById } from "../api/projects";
-import CreateTaskModal from "../components/CreateTaskModal";
+} from '../api/tasks';
+import { getProjectById } from '../api/projects';
+import CreateTaskModal from '../components/CreateTaskModal';
+import './ProjectBoard.css';
 
-const STATUSES: TaskStatus[] = ["todo", "in_progress", "done"];
+const STATUSES: TaskStatus[] = ['todo', 'in_progress', 'done'];
 
 const ProjectBoard: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
@@ -43,8 +44,8 @@ const ProjectBoard: React.FC = () => {
         setMembers(projectData.members);
       } catch (err) {
         console.error(err);
-        alert("Failed to load project or tasks");
-        navigate("/projects");
+        alert('Failed to load project or tasks');
+        navigate('/projects');
       } finally {
         setLoading(false);
       }
@@ -62,7 +63,7 @@ const ProjectBoard: React.FC = () => {
       setTasks(updatedTasks);
       setShowModal(false);
     } catch {
-      alert("Failed to create task");
+      alert('Failed to create task');
     }
   };
 
@@ -80,14 +81,14 @@ const ProjectBoard: React.FC = () => {
     // Optimistic UI update
     setTasks((prev) =>
       prev.map((task) =>
-        task._id === draggableId ? { ...task, status: newStatus } : task,
-      ),
+        task._id === draggableId ? { ...task, status: newStatus } : task
+      )
     );
 
     try {
       await updateTaskStatus(draggableId, newStatus);
     } catch {
-      alert("Failed to update task status");
+      alert('Failed to update task status');
     }
   };
 
@@ -96,91 +97,155 @@ const ProjectBoard: React.FC = () => {
       await assignUserToTask(taskId, userId);
       setTasks((prev) =>
         prev.map((task) =>
-          task._id === taskId ? { ...task, assignedTo: userId } : task,
-        ),
+          task._id === taskId ? { ...task, assignedTo: userId } : task
+        )
       );
     } catch {
-      alert("Failed to assign user");
+      alert('Failed to assign user');
     }
   };
 
   const tasksByStatus = (status: TaskStatus) =>
     tasks.filter((task) => task.status === status);
 
+  const assignedUser = (task: Task) => {
+    if (task.assignedTo && typeof task.assignedTo === 'object')
+      return task.assignedTo;
+    return members.find((member) => member._id === task.assignedTo);
+  };
+
+  const initials = (name: string) =>
+    name
+      .split(' ')
+      .map((part) => part[0])
+      .join('')
+      .slice(0, 2)
+      .toUpperCase();
+
   if (loading) return <p style={{ padding: 24 }}>Loading board...</p>;
 
   return (
-    <div style={{ padding: 24 }}>
-      <h1 style={{ color: "#16a34a" }}>Project Board</h1>
-
-      <button style={styles.addButton} onClick={() => setShowModal(true)}>
-        + Add Task
-      </button>
+    <main className="board-page">
+      <div className="board-toolbar">
+        <div>
+          <p className="board-eyebrow">Project workspace</p>
+          <h1 className="board-title">Project Board</h1>
+        </div>
+        <button className="add-task-button" onClick={() => setShowModal(true)}>
+          + Add task
+        </button>
+      </div>
 
       <DragDropContext onDragEnd={onDragEnd}>
-        <div style={styles.board}>
-          {STATUSES.map((status) => (
-            <Droppable droppableId={status} key={status}>
-              {(provided) => (
-                <div
-                  ref={provided.innerRef}
-                  {...provided.droppableProps}
-                  style={styles.column}
-                >
-                  <h3 style={styles.columnTitle}>
-                    {status.replace("_", " ").toUpperCase()}
-                  </h3>
+        <div className="board">
+          {STATUSES.map((status) => {
+            const statusTasks = tasksByStatus(status);
+            return (
+              <Droppable droppableId={status} key={status}>
+                {(provided) => (
+                  <div
+                    ref={provided.innerRef}
+                    {...provided.droppableProps}
+                    className={`board-column board-column--${status}`}
+                  >
+                    <div className="column-header">
+                      <h3 className="column-title">
+                        {status.replace('_', ' ')}
+                      </h3>
+                      <span className="column-count">{statusTasks.length}</span>
+                    </div>
 
-                  {tasksByStatus(status).map((task, index) => (
-                    <Draggable
-                      key={task._id}
-                      draggableId={task._id}
-                      index={index}
-                    >
-                      {(provided) => (
-                        <div
-                          ref={provided.innerRef}
-                          {...provided.draggableProps}
-                          {...provided.dragHandleProps}
-                          style={{
-                            ...styles.card,
-                            ...provided.draggableProps.style,
-                          }}
+                    <div className="column-dropzone">
+                      {statusTasks.map((task, index) => (
+                        <Draggable
+                          key={task._id}
+                          draggableId={task._id}
+                          index={index}
                         >
-                          <strong>{task.title}</strong>
-                          {task.description && <p>{task.description}</p>}
-
-                          {/* Assignment dropdown */}
-                          <div style={{ marginTop: 8 }}>
-                            <select
-                              value={
-                                task.assignedTo &&
-                                typeof task.assignedTo === "object"
-                                  ? task.assignedTo._id
-                                  : (task.assignedTo ?? "")
-                              }
-                              onChange={(e) =>
-                                handleAssignUser(task._id, e.target.value)
-                              }
+                          {(provided) => (
+                            <div
+                              ref={provided.innerRef}
+                              {...provided.draggableProps}
+                              {...provided.dragHandleProps}
+                              style={{
+                                ...provided.draggableProps.style,
+                              }}
+                              className="task-card"
                             >
-                              <option value="">Unassigned</option>
-                              {members.map((member) => (
-                                <option key={member._id} value={member._id}>
-                                  {member.name}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                        </div>
-                      )}
-                    </Draggable>
-                  ))}
+                              <h4 className="task-title">{task.title}</h4>
+                              {task.description && (
+                                <p className="task-description">
+                                  {task.description}
+                                </p>
+                              )}
 
-                  {provided.placeholder}
-                </div>
-              )}
-            </Droppable>
-          ))}
+                              <div
+                                className="task-person"
+                                title={
+                                  assignedUser(task)
+                                    ? `Assigned to ${assignedUser(task)?.name}`
+                                    : 'Unassigned'
+                                }
+                              >
+                                <div className="task-avatar">
+                                  {assignedUser(task)?.avatarUrl ? (
+                                    <img
+                                      src={assignedUser(task)?.avatarUrl}
+                                      alt=""
+                                    />
+                                  ) : assignedUser(task) ? (
+                                    initials(assignedUser(task)?.name || '')
+                                  ) : (
+                                    '—'
+                                  )}
+                                </div>
+                                <span>
+                                  {assignedUser(task)?.name || 'Unassigned'}
+                                </span>
+                              </div>
+
+                              <div>
+                                <label
+                                  className="task-assignee"
+                                  htmlFor={`assignee-${task._id}`}
+                                >
+                                  Assignee
+                                </label>
+                                <select
+                                  id={`assignee-${task._id}`}
+                                  className="task-select"
+                                  value={
+                                    task.assignedTo &&
+                                    typeof task.assignedTo === 'object'
+                                      ? task.assignedTo._id
+                                      : (task.assignedTo ?? '')
+                                  }
+                                  onChange={(e) =>
+                                    handleAssignUser(task._id, e.target.value)
+                                  }
+                                >
+                                  <option value="">Unassigned</option>
+                                  {members.map((member) => (
+                                    <option key={member._id} value={member._id}>
+                                      {member.name}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                            </div>
+                          )}
+                        </Draggable>
+                      ))}
+                      {statusTasks.length === 0 && (
+                        <div className="empty-column">Drop tasks here</div>
+                      )}
+                      {provided.placeholder}
+                    </div>
+                  </div>
+                )}
+              </Droppable>
+            );
+          })}
         </div>
       </DragDropContext>
 
@@ -190,37 +255,8 @@ const ProjectBoard: React.FC = () => {
           onCreate={handleCreateTask}
         />
       )}
-    </div>
+    </main>
   );
-};
-
-const styles: Record<string, React.CSSProperties> = {
-  board: { display: "flex", gap: 16, marginTop: 20 },
-  column: {
-    background: "#f3f4f6",
-    padding: 12,
-    borderRadius: 8,
-    flex: 1,
-    minHeight: 400,
-  },
-  columnTitle: { marginBottom: 10, color: "#16a34a" },
-  card: {
-    background: "#fff",
-    padding: 12,
-    marginBottom: 10,
-    borderRadius: 6,
-    borderLeft: "4px solid #22c55e",
-    boxShadow: "0 4px 10px rgba(0,0,0,0.05)",
-  },
-  addButton: {
-    marginBottom: 16,
-    background: "#22c55e",
-    color: "#fff",
-    border: "none",
-    padding: "8px 12px",
-    borderRadius: 4,
-    cursor: "pointer",
-  },
 };
 
 export default ProjectBoard;

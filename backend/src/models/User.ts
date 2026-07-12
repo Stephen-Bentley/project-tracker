@@ -6,6 +6,7 @@ export interface IUser extends Document {
   email: string;
   password: string;
   role: 'admin' | 'user';
+  avatarUrl?: string;
   comparePassword(candidatePassword: string): Promise<boolean>;
 }
 
@@ -14,29 +15,34 @@ const UserSchema = new Schema<IUser>(
     name: {
       type: String,
       required: true,
-      trim: true
+      trim: true,
     },
     email: {
       type: String,
       required: true,
       unique: true,
       lowercase: true,
-      trim: true
+      trim: true,
     },
     password: {
       type: String,
       required: true,
       minlength: 6,
-      select: false // IMPORTANT: don’t return password by default
+      select: false, // IMPORTANT: don’t return password by default
     },
     role: {
       type: String,
       enum: ['admin', 'user'],
-      default: 'user'
-    }
+      default: 'user',
+    },
+    avatarUrl: {
+      type: String,
+      trim: true,
+      default: '',
+    },
   },
   {
-    timestamps: true
+    timestamps: true,
   }
 );
 
@@ -62,7 +68,7 @@ UserSchema.pre<IUser>('save', async function () {
 UserSchema.methods.comparePassword = async function (
   candidatePassword: string
 ): Promise<boolean> {
-  // Since password has 'select: false', ensure it exists on 'this' 
+  // Since password has 'select: false', ensure it exists on 'this'
   // before comparing in your controller (using .select('+password'))
   return bcrypt.compare(candidatePassword, this.password);
 };

@@ -1,75 +1,60 @@
-import React from "react";
-import { useNavigate } from "react-router-dom";
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import './Dashboard.css';
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
-  const role = localStorage.getItem("role"); // 'admin' or 'user'
+  const role = localStorage.getItem('role'); // 'admin' or 'user'
 
   const logout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("role");
-    navigate("/login");
+    localStorage.removeItem('token');
+    localStorage.removeItem('role');
+    navigate('/login');
   };
 
   const goToProjects = () => {
-    navigate("/projects");
+    navigate('/projects');
   };
 
   const goToAdmin = () => {
-    navigate("/admin/projects");
+    navigate('/admin/projects');
   };
 
   return (
-    <div style={{ padding: 24 }}>
-      <h1 style={{ color: "#16a34a" }}>Dashboard</h1>
-      <p>Welcome! Choose where to go next:</p>
-
-      <div style={{ marginTop: 16, display: "flex", gap: 12 }}>
+    <main className="dashboard-page">
+      <section className="dashboard-hero">
+        <p>Workspace overview</p>
+        <h1>Ready to make progress?</h1>
+        <span>
+          Pick up where you left off, move a task forward, or set up your next
+          project.
+        </span>
+      </section>
+      <section className="dashboard-actions">
         <button
           onClick={goToProjects}
-          style={{
-            padding: "8px 16px",
-            backgroundColor: "#16a34a",
-            color: "white",
-            border: "none",
-            borderRadius: 4,
-            cursor: "pointer",
-          }}
+          className="dashboard-action dashboard-action--primary"
         >
-          My Projects
+          <strong>My projects</strong>
+          <span>Open your boards and keep work moving.</span>
         </button>
 
-        {role === "admin" && (
-          <button
-            onClick={goToAdmin}
-            style={{
-              padding: "8px 16px",
-              backgroundColor: "#15803d",
-              color: "white",
-              border: "none",
-              borderRadius: 4,
-              cursor: "pointer",
-            }}
-          >
-            Admin Projects
+        {role === 'admin' && (
+          <button onClick={goToAdmin} className="dashboard-action">
+            <strong>Admin tools</strong>
+            <span>Create users and start a new project.</span>
           </button>
         )}
 
         <button
           onClick={logout}
-          style={{
-            padding: "8px 16px",
-            backgroundColor: "#dc2626",
-            color: "white",
-            border: "none",
-            borderRadius: 4,
-            cursor: "pointer",
-          }}
+          className="dashboard-action dashboard-action--danger"
         >
-          Logout
+          <strong>Log out</strong>
+          <span>End this session on this device.</span>
         </button>
-      </div>
-    </div>
+      </section>
+    </main>
   );
 };
 
