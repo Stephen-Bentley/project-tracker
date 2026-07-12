@@ -5,7 +5,7 @@ import {
   getMyProjects,
   removeUserFromProject,
 } from '../api/projects';
-import { createUser, getUsers } from '../api/users';
+import { createUser, getCurrentUser, getUsers } from '../api/users';
 import { Project } from '../types/projects';
 import { User } from '../types';
 import './AdminProjects.css';
@@ -16,6 +16,7 @@ const AdminProjectsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<Tab>('projects');
   const [projects, setProjects] = useState<Project[]>([]);
   const [users, setUsers] = useState<User[]>([]);
+  const [currentUserId, setCurrentUserId] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -29,10 +30,11 @@ const AdminProjectsPage: React.FC = () => {
   const [memberAction, setMemberAction] = useState('');
 
   useEffect(() => {
-    Promise.all([getMyProjects(), getUsers()])
-      .then(([projectData, userData]) => {
+    Promise.all([getMyProjects(), getUsers(), getCurrentUser()])
+      .then(([projectData, userData, currentUser]) => {
         setProjects(projectData);
         setUsers(userData);
+        setCurrentUserId(currentUser._id);
       })
       .catch((err: any) =>
         setError(err.response?.data?.message || 'Unable to load admin data.')
@@ -184,10 +186,17 @@ const AdminProjectsPage: React.FC = () => {
                           <button
                             type="button"
                             className="remove-member"
-                            disabled={memberAction === `${project._id}-${member._id}`}
+                            disabled={
+                              member._id === currentUserId ||
+                              memberAction === `${project._id}-${member._id}`
+                            }
                             onClick={() => removeMember(project, member)}
                           >
-                            {memberAction === `${project._id}-${member._id}` ? 'Removing...' : 'Remove'}
+                            {member._id === currentUserId
+                              ? 'You'
+                              : memberAction === `${project._id}-${member._id}`
+                              ? 'Removing...'
+                              : 'Remove'}
                           </button>
                         </li>
                       ))}

@@ -91,6 +91,10 @@ export const removeUserFromProject = async (
     return res.status(404).json({ message: 'Project not found' });
   }
 
+  if (req.user!.userId === userId) {
+    return res.status(400).json({ message: 'You cannot remove yourself from a project' });
+  }
+
   if (project.createdBy.toString() === userId) {
     return res.status(400).json({ message: 'Cannot remove project creator' });
   }
