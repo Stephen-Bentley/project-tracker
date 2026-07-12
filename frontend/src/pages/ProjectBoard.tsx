@@ -14,10 +14,12 @@ import {
   getTasksByProject,
   createTask,
   updateTaskStatus,
-  assignUserToTask,
+  updateTaskDetails,
+  uploadTaskImages,
 } from '../api/tasks';
 import { getProjectById } from '../api/projects';
 import CreateTaskModal from '../components/CreateTaskModal';
+import TaskDetailsModal from '../components/TaskDetailsModal';
 import './ProjectBoard.css';
 
 const STATUSES: TaskStatus[] = ['todo', 'in_progress', 'done'];
@@ -30,6 +32,7 @@ const ProjectBoard: React.FC = () => {
   const [members, setMembers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
   // Load tasks and project members
   useEffect(() => {
@@ -93,17 +96,29 @@ const ProjectBoard: React.FC = () => {
     }
   };
 
-  const handleAssignUser = async (taskId: string, userId: string) => {
-    try {
-      await assignUserToTask(taskId, userId);
-      setTasks((prev) =>
-        prev.map((task) =>
-          task._id === taskId ? { ...task, assignedTo: userId } : task
-        )
-      );
-    } catch {
-      alert('Failed to assign user');
-    }
+  const refreshTasks = async () => {
+    if (!projectId) return;
+    const updatedTasks = await getTasksByProject(projectId);
+    setTasks(updatedTasks);
+    setSelectedTask((current) =>
+      current ? updatedTasks.find((task) => task._id === current._id) || null : null
+    );
+  };
+
+  const saveTaskDetails = async (
+    title: string,
+    description: string,
+    assignedTo: string
+  ) => {
+    if (!selectedTask) return;
+    await updateTaskDetails(selectedTask._id, title, description, assignedTo);
+    await refreshTasks();
+  };
+
+  const addTaskImages = async (files: File[]) => {
+    if (!selectedTask) return;
+    await uploadTaskImages(selectedTask._id, files);
+    await refreshTasks();
   };
 
   const tasksByStatus = (status: TaskStatus) =>
@@ -172,6 +187,7 @@ const ProjectBoard: React.FC = () => {
                                 ...provided.draggableProps.style,
                               }}
                               className="task-card"
+                              onClick={() => setSelectedTask(task)}
                             >
                               <h4 className="task-title">{task.title}</h4>
                               {task.description && (
@@ -205,34 +221,6 @@ const ProjectBoard: React.FC = () => {
                                 </span>
                               </div>
 
-                              <div>
-                                <label
-                                  className="task-assignee"
-                                  htmlFor={`assignee-${task._id}`}
-                                >
-                                  Assignee
-                                </label>
-                                <select
-                                  id={`assignee-${task._id}`}
-                                  className="task-select"
-                                  value={
-                                    task.assignedTo &&
-                                    typeof task.assignedTo === 'object'
-                                      ? task.assignedTo._id
-                                      : (task.assignedTo ?? '')
-                                  }
-                                  onChange={(e) =>
-                                    handleAssignUser(task._id, e.target.value)
-                                  }
-                                >
-                                  <option value="">Unassigned</option>
-                                  {members.map((member) => (
-                                    <option key={member._id} value={member._id}>
-                                      {member.name}
-                                    </option>
-                                  ))}
-                                </select>
-                              </div>
                             </div>
                           )}
                         </Draggable>
@@ -254,6 +242,15 @@ const ProjectBoard: React.FC = () => {
         <CreateTaskModal
           onClose={() => setShowModal(false)}
           onCreate={handleCreateTask}
+        />
+      )}
+      {selectedTask && (
+        <TaskDetailsModal
+          task={selectedTask}
+          members={members}
+          onClose={() => setSelectedTask(null)}
+          onSave={saveTaskDetails}
+          onUpload={addTaskImages}
         />
       )}
     </main>

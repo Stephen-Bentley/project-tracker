@@ -27,3 +27,29 @@ export const createTask = async (
 export const assignUserToTask = async (taskId: string, userId: string) => {
   await api.put(`/tasks/${taskId}/assign`, { userId });
 };
+
+export const updateTaskDetails = async (
+  taskId: string,
+  title: string,
+  description: string,
+  assignedTo: string
+): Promise<Task> => {
+  const res = await api.put<Task>(`/tasks/${taskId}`, {
+    title,
+    description,
+    assignedTo: assignedTo || null,
+  });
+  return res.data;
+};
+
+export const uploadTaskImages = async (
+  taskId: string,
+  files: File[]
+): Promise<Task> => {
+  const formData = new FormData();
+  files.forEach((file) => formData.append('images', file));
+  const res = await api.post<Task>(`/tasks/${taskId}/images`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return res.data;
+};

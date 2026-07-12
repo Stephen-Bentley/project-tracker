@@ -1,6 +1,8 @@
 import api from '../api/api';
 
-export const avatarSource = (avatarUrl?: string) => {
-  if (!avatarUrl || !avatarUrl.startsWith('/')) return avatarUrl;
-  return new URL(avatarUrl, api.defaults.baseURL).toString();
+export const apiAssetSource = (assetUrl?: string) => {
+  if (!assetUrl || !assetUrl.startsWith('/')) return assetUrl;
+  return new URL(assetUrl, api.defaults.baseURL).toString();
 };
+
+export const avatarSource = apiAssetSource;

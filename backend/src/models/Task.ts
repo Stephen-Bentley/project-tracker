@@ -2,6 +2,14 @@ import mongoose, { Document, Schema } from 'mongoose';
 
 export type TaskStatus = 'todo' | 'in_progress' | 'done';
 
+export interface ITaskImage {
+  _id?: mongoose.Types.ObjectId;
+  filename: string;
+  contentType: string;
+  data: Buffer;
+  uploadedAt: Date;
+}
+
 export interface ITask extends Document {
   title: string;
   description?: string;
@@ -11,6 +19,7 @@ export interface ITask extends Document {
   createdBy: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
+  images: ITaskImage[];
 }
 
 const TaskSchema = new Schema<ITask>(
@@ -50,7 +59,16 @@ const TaskSchema = new Schema<ITask>(
       type: Schema.Types.ObjectId,
       ref: 'User',
       required: true
-    }
+    },
+
+    images: [
+      {
+        filename: { type: String, required: true },
+        contentType: { type: String, required: true },
+        data: { type: Buffer, required: true, select: false },
+        uploadedAt: { type: Date, default: Date.now },
+      },
+    ]
   },
   {
     timestamps: true

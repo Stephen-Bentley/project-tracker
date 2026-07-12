@@ -7,14 +7,29 @@ const allowedImageTypes = new Set([
   'image/gif',
 ]);
 
-export const avatarUpload = multer({
+const imageFileFilter: multer.Options['fileFilter'] = (
+  _req,
+  file,
+  callback
+) => {
+  if (!allowedImageTypes.has(file.mimetype)) {
+    callback(new Error('Only JPG, PNG, WebP, and GIF images are allowed.'));
+    return;
+  }
+  callback(null, true);
+};
+
+const imageUploadOptions = {
   storage: multer.memoryStorage(),
+  fileFilter: imageFileFilter,
+};
+
+export const avatarUpload = multer({
+  ...imageUploadOptions,
   limits: { fileSize: 5 * 1024 * 1024 },
-  fileFilter: (_req, file, callback) => {
-    if (!allowedImageTypes.has(file.mimetype)) {
-      callback(new Error('Only JPG, PNG, WebP, and GIF images are allowed.'));
-      return;
-    }
-    callback(null, true);
-  },
+});
+
+export const taskImageUpload = multer({
+  ...imageUploadOptions,
+  limits: { fileSize: 3 * 1024 * 1024 },
 });
