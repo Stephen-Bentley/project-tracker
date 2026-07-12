@@ -12,26 +12,26 @@ const ProjectSchema = new Schema<IProject>(
     name: {
       type: String,
       required: true,
-      trim: true
+      trim: true,
     },
     description: {
       type: String,
-      trim: true
+      trim: true,
     },
     members: [
       {
         type: Schema.Types.ObjectId,
-        ref: 'User'
-      }
+        ref: 'User',
+      },
     ],
     createdBy: {
       type: Schema.Types.ObjectId,
       ref: 'User',
-      required: true
-    }
+      required: true,
+    },
   },
   {
-    timestamps: true
+    timestamps: true,
   }
 );
 

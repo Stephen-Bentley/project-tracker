@@ -7,7 +7,11 @@ interface Props {
   task: Task;
   members: User[];
   onClose: () => void;
-  onSave: (title: string, description: string, assignedTo: string) => Promise<void>;
+  onSave: (
+    title: string,
+    description: string,
+    assignedTo: string
+  ) => Promise<void>;
   onUpload: (files: File[]) => Promise<void>;
 }
 
@@ -21,7 +25,9 @@ const TaskDetailsModal: React.FC<Props> = ({
   const [title, setTitle] = useState(task.title);
   const [description, setDescription] = useState(task.description || '');
   const [assignedTo, setAssignedTo] = useState(
-    typeof task.assignedTo === 'object' ? task.assignedTo?._id || '' : task.assignedTo || ''
+    typeof task.assignedTo === 'object'
+      ? task.assignedTo?._id || ''
+      : task.assignedTo || ''
   );
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -68,7 +74,11 @@ const TaskDetailsModal: React.FC<Props> = ({
   const imageSlotsRemaining = 3 - (task.images?.length || 0);
 
   return (
-    <div className="task-modal-overlay" role="presentation" onMouseDown={onClose}>
+    <div
+      className="task-modal-overlay"
+      role="presentation"
+      onMouseDown={onClose}
+    >
       <section
         className="task-modal"
         role="dialog"
@@ -81,25 +91,42 @@ const TaskDetailsModal: React.FC<Props> = ({
             <p>Task details</p>
             <h2 id="task-modal-title">Edit task</h2>
           </div>
-          <button type="button" className="task-modal-close" onClick={onClose} aria-label="Close task details">
+          <button
+            type="button"
+            className="task-modal-close"
+            onClick={onClose}
+            aria-label="Close task details"
+          >
             ×
           </button>
         </div>
         <form className="task-details-form" onSubmit={save}>
           <label>
             Heading
-            <input required value={title} onChange={(event) => setTitle(event.target.value)} />
+            <input
+              required
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
+            />
           </label>
           <label>
             Description
-            <textarea value={description} onChange={(event) => setDescription(event.target.value)} />
+            <textarea
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
+            />
           </label>
           <label>
             Assignee
-            <select value={assignedTo} onChange={(event) => setAssignedTo(event.target.value)}>
+            <select
+              value={assignedTo}
+              onChange={(event) => setAssignedTo(event.target.value)}
+            >
               <option value="">Unassigned</option>
               {members.map((member) => (
-                <option key={member._id} value={member._id}>{member.name}</option>
+                <option key={member._id} value={member._id}>
+                  {member.name}
+                </option>
               ))}
             </select>
           </label>
@@ -112,9 +139,17 @@ const TaskDetailsModal: React.FC<Props> = ({
             {task.images?.length > 0 && (
               <div className="task-image-grid">
                 {task.images.map((image) => {
-                  const source = apiAssetSource(`/api/tasks/${task._id}/images/${image._id}`);
+                  const source = apiAssetSource(
+                    `/api/tasks/${task._id}/images/${image._id}`
+                  );
                   return (
-                    <a key={image._id} href={source} target="_blank" rel="noreferrer" title={image.filename}>
+                    <a
+                      key={image._id}
+                      href={source}
+                      target="_blank"
+                      rel="noreferrer"
+                      title={image.filename}
+                    >
                       <img src={source} alt={image.filename} />
                     </a>
                   );
@@ -140,8 +175,12 @@ const TaskDetailsModal: React.FC<Props> = ({
           </div>
           {message && <p className="task-modal-message">{message}</p>}
           <div className="task-modal-actions">
-            <button type="button" className="task-cancel" onClick={onClose}>Close</button>
-            <button className="task-save" disabled={saving}>{saving ? 'Saving...' : 'Save changes'}</button>
+            <button type="button" className="task-cancel" onClick={onClose}>
+              Close
+            </button>
+            <button className="task-save" disabled={saving}>
+              {saving ? 'Saving...' : 'Save changes'}
+            </button>
           </div>
         </form>
       </section>

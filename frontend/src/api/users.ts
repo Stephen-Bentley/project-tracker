@@ -6,7 +6,11 @@ export const getUsers = async (): Promise<User[]> => {
   return res.data;
 };
 
-export const createUser = async (name: string, email: string, password: string) => {
+export const createUser = async (
+  name: string,
+  email: string,
+  password: string
+) => {
   const res = await api.post<User>('/users', { name, email, password });
   return res.data;
 };
@@ -16,7 +20,10 @@ export const getCurrentUser = async (): Promise<User> => {
   return res.data;
 };
 
-export const updateCurrentUser = async (name: string, avatarUrl: string): Promise<User> => {
+export const updateCurrentUser = async (
+  name: string,
+  avatarUrl: string
+): Promise<User> => {
   const res = await api.put<User>('/users/me', { name, avatarUrl });
   return res.data;
 };
@@ -30,6 +37,9 @@ export const uploadCurrentUserAvatar = async (file: File): Promise<User> => {
   return res.data;
 };
 
-export const changeCurrentUserPassword = async (currentPassword: string, newPassword: string) => {
+export const changeCurrentUserPassword = async (
+  currentPassword: string,
+  newPassword: string
+) => {
   await api.put('/users/me/password', { currentPassword, newPassword });
 };

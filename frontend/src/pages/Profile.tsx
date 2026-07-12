@@ -79,7 +79,9 @@ const Profile: React.FC<ProfileProps> = ({ darkMode, onThemeChange }) => {
       setAvatarLoadFailed(false);
       setMessage('Profile image uploaded.');
     } catch (error: any) {
-      setMessage(error.response?.data?.message || 'Unable to upload your image.');
+      setMessage(
+        error.response?.data?.message || 'Unable to upload your image.'
+      );
     } finally {
       setUploadingAvatar(false);
     }
@@ -184,7 +186,10 @@ const Profile: React.FC<ProfileProps> = ({ darkMode, onThemeChange }) => {
             {saving ? 'Saving...' : 'Save changes'}
           </button>
         </form>
-        <form className="profile-card profile-form password-form" onSubmit={changePassword}>
+        <form
+          className="profile-card profile-form password-form"
+          onSubmit={changePassword}
+        >
           <h2>Reset password</h2>
           <p className="form-help">
             Choose a new password with at least six characters.
@@ -221,7 +226,9 @@ const Profile: React.FC<ProfileProps> = ({ darkMode, onThemeChange }) => {
               onChange={(event) => setConfirmPassword(event.target.value)}
             />
           </label>
-          {passwordMessage && <p className="profile-message">{passwordMessage}</p>}
+          {passwordMessage && (
+            <p className="profile-message">{passwordMessage}</p>
+          )}
           <button className="primary-action" disabled={changingPassword}>
             {changingPassword ? 'Updating...' : 'Update password'}
           </button>

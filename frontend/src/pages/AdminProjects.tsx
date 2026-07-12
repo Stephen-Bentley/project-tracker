@@ -26,7 +26,9 @@ const AdminProjectsPage: React.FC = () => {
   const [userName, setUserName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [selectedUsers, setSelectedUsers] = useState<Record<string, string>>({});
+  const [selectedUsers, setSelectedUsers] = useState<Record<string, string>>(
+    {}
+  );
   const [memberAction, setMemberAction] = useState('');
 
   useEffect(() => {
@@ -121,14 +123,18 @@ const AdminProjectsPage: React.FC = () => {
           candidate._id === project._id
             ? {
                 ...candidate,
-                members: candidate.members.filter((member) => member._id !== user._id),
+                members: candidate.members.filter(
+                  (member) => member._id !== user._id
+                ),
               }
             : candidate
         )
       );
       setNotice('User removed from project.');
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Unable to remove user from project.');
+      setError(
+        err.response?.data?.message || 'Unable to remove user from project.'
+      );
     } finally {
       setMemberAction('');
     }
@@ -195,8 +201,8 @@ const AdminProjectsPage: React.FC = () => {
                             {member._id === currentUserId
                               ? 'You'
                               : memberAction === `${project._id}-${member._id}`
-                              ? 'Removing...'
-                              : 'Remove'}
+                                ? 'Removing...'
+                                : 'Remove'}
                           </button>
                         </li>
                       ))}
@@ -216,7 +222,9 @@ const AdminProjectsPage: React.FC = () => {
                         {users
                           .filter(
                             (user) =>
-                              !project.members.some((member) => member._id === user._id)
+                              !project.members.some(
+                                (member) => member._id === user._id
+                              )
                           )
                           .map((user) => (
                             <option key={user._id} value={user._id}>
@@ -226,7 +234,10 @@ const AdminProjectsPage: React.FC = () => {
                       </select>
                       <button
                         type="button"
-                        disabled={!selectedUsers[project._id] || memberAction.startsWith(`${project._id}-`)}
+                        disabled={
+                          !selectedUsers[project._id] ||
+                          memberAction.startsWith(`${project._id}-`)
+                        }
                         onClick={() => addMember(project)}
                       >
                         Add

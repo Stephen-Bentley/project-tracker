@@ -6,22 +6,22 @@ const Login: React.FC = () => {
   const [password, setPassword] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
+    e.preventDefault();
 
-  try {
-    const res = await api.post('/auth/login', {
-      email,
-      password
-    });
+    try {
+      const res = await api.post('/auth/login', {
+        email,
+        password,
+      });
 
-    console.log(res.data)
-    localStorage.setItem('token', res.data.token);
-    localStorage.setItem('role', res.data.user.role);
-    window.location.href = '/';
-  } catch (err: any) {
-    alert(err.response?.data?.message || 'Login failed');
-  }
-};
+      console.log(res.data);
+      localStorage.setItem('token', res.data.token);
+      localStorage.setItem('role', res.data.user.role);
+      window.location.href = '/';
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Login failed');
+    }
+  };
 
   return (
     <div style={styles.container}>
@@ -33,7 +33,7 @@ const Login: React.FC = () => {
           type="email"
           placeholder="Email"
           value={email}
-          onChange={e => setEmail(e.target.value)}
+          onChange={(e) => setEmail(e.target.value)}
         />
 
         <input
@@ -41,7 +41,7 @@ const Login: React.FC = () => {
           type="password"
           placeholder="Password"
           value={password}
-          onChange={e => setPassword(e.target.value)}
+          onChange={(e) => setPassword(e.target.value)}
         />
 
         <button style={styles.button}>Login</button>
@@ -55,25 +55,25 @@ const styles: Record<string, React.CSSProperties> = {
     height: '100vh',
     display: 'flex',
     justifyContent: 'center',
-    alignItems: 'center'
+    alignItems: 'center',
   },
   form: {
     background: '#fff',
     padding: 30,
     borderRadius: 8,
     width: 320,
-    boxShadow: '0 10px 25px rgba(0,0,0,0.1)'
+    boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
   },
   title: {
     marginBottom: 20,
-    color: '#16a34a'
+    color: '#16a34a',
   },
   input: {
     width: '100%',
     padding: 10,
     marginBottom: 12,
     borderRadius: 4,
-    border: '1px solid #ddd'
+    border: '1px solid #ddd',
   },
   button: {
     width: '100%',
@@ -82,8 +82,8 @@ const styles: Record<string, React.CSSProperties> = {
     color: '#fff',
     border: 'none',
     borderRadius: 4,
-    cursor: 'pointer'
-  }
+    cursor: 'pointer',
+  },
 };
 
 export default Login;

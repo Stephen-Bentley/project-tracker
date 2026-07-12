@@ -27,38 +27,38 @@ const TaskSchema = new Schema<ITask>(
     title: {
       type: String,
       required: true,
-      trim: true
+      trim: true,
     },
 
     description: {
       type: String,
-      trim: true
+      trim: true,
     },
 
     project: {
       type: Schema.Types.ObjectId,
       ref: 'Project',
       required: true,
-      index: true
+      index: true,
     },
 
     assignedTo: {
       type: Schema.Types.ObjectId,
       ref: 'User',
-      default: null
+      default: null,
     },
 
     status: {
       type: String,
       enum: ['todo', 'in_progress', 'done'],
       default: 'todo',
-      index: true
+      index: true,
     },
 
     createdBy: {
       type: Schema.Types.ObjectId,
       ref: 'User',
-      required: true
+      required: true,
     },
 
     images: [
@@ -68,10 +68,10 @@ const TaskSchema = new Schema<ITask>(
         data: { type: Buffer, required: true, select: false },
         uploadedAt: { type: Date, default: Date.now },
       },
-    ]
+    ],
   },
   {
-    timestamps: true
+    timestamps: true,
   }
 );
 

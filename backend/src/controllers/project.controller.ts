@@ -92,7 +92,9 @@ export const removeUserFromProject = async (
   }
 
   if (req.user!.userId === userId) {
-    return res.status(400).json({ message: 'You cannot remove yourself from a project' });
+    return res
+      .status(400)
+      .json({ message: 'You cannot remove yourself from a project' });
   }
 
   if (project.createdBy.toString() === userId) {

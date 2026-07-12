@@ -101,7 +101,9 @@ const ProjectBoard: React.FC = () => {
     const updatedTasks = await getTasksByProject(projectId);
     setTasks(updatedTasks);
     setSelectedTask((current) =>
-      current ? updatedTasks.find((task) => task._id === current._id) || null : null
+      current
+        ? updatedTasks.find((task) => task._id === current._id) || null
+        : null
     );
   };
 
@@ -207,7 +209,9 @@ const ProjectBoard: React.FC = () => {
                                 <div className="task-avatar">
                                   {assignedUser(task)?.avatarUrl ? (
                                     <img
-                                      src={avatarSource(assignedUser(task)?.avatarUrl)}
+                                      src={avatarSource(
+                                        assignedUser(task)?.avatarUrl
+                                      )}
                                       alt=""
                                     />
                                   ) : assignedUser(task) ? (
@@ -220,7 +224,6 @@ const ProjectBoard: React.FC = () => {
                                   {assignedUser(task)?.name || 'Unassigned'}
                                 </span>
                               </div>
-
                             </div>
                           )}
                         </Draggable>

@@ -1,5 +1,5 @@
-import api from "./api";
-import { Task } from "../types/task";
+import api from './api';
+import { Task } from '../types/task';
 
 export const getTasksByProject = async (projectId: string): Promise<Task[]> => {
   const res = await api.get<Task[]>(`/tasks/project/${projectId}`);
@@ -13,9 +13,9 @@ export const updateTaskStatus = async (taskId: string, status: string) => {
 export const createTask = async (
   projectId: string,
   title: string,
-  description?: string,
+  description?: string
 ) => {
-  const res = await api.post("/tasks", {
+  const res = await api.post('/tasks', {
     projectId,
     title,
     description,

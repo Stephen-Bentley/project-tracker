@@ -126,7 +126,9 @@ export const uploadTaskImages = async (req: AuthRequest, res: Response) => {
     return res.status(400).json({ message: 'Invalid task ID' });
   }
   if (!files?.length) {
-    return res.status(400).json({ message: 'Please select at least one image' });
+    return res
+      .status(400)
+      .json({ message: 'Please select at least one image' });
   }
 
   const task = await Task.findById(taskId).select('+images.data');
@@ -138,7 +140,9 @@ export const uploadTaskImages = async (req: AuthRequest, res: Response) => {
     return res.status(403).json({ message: 'Not a project member' });
   }
   if (task.images.length + files.length > 3) {
-    return res.status(400).json({ message: 'A task can have up to three images' });
+    return res
+      .status(400)
+      .json({ message: 'A task can have up to three images' });
   }
 
   task.images.push(

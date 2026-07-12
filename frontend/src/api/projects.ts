@@ -20,6 +20,9 @@ export const addUserToProject = async (projectId: string, userId: string) => {
   await api.post(`/projects/${projectId}/users`, { userId });
 };
 
-export const removeUserFromProject = async (projectId: string, userId: string) => {
+export const removeUserFromProject = async (
+  projectId: string,
+  userId: string
+) => {
   await api.delete(`/projects/${projectId}/users/${userId}`);
 };
