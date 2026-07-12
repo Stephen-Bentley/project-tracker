@@ -34,6 +34,45 @@ export const updateCurrentUser = async (
   res.json(user);
 };
 
+export const uploadCurrentUserAvatar = async (
+  req: AuthenticatedRequest,
+  res: Response
+) => {
+  if (!req.file) {
+    return res.status(400).json({ message: 'Please select an image to upload' });
+  }
+
+  const user = await User.findById(req.user?.userId).select('+avatarImage +avatarContentType');
+
+  if (!user) return res.status(404).json({ message: 'User not found' });
+  user.avatarImage = req.file.buffer;
+  user.avatarContentType = req.file.mimetype;
+  // A versioned URL makes browsers fetch the new image immediately after an upload.
+  user.avatarUrl = `/api/users/${user._id.toString()}/avatar?v=${Date.now()}`;
+  await user.save();
+
+  res.json({
+    _id: user._id,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+    avatarUrl: user.avatarUrl,
+  });
+};
+
+export const getUserAvatar = async (req: Request, res: Response) => {
+  const user = await User.findById(req.params.userId).select(
+    '+avatarImage +avatarContentType'
+  );
+
+  if (!user?.avatarImage || !user.avatarContentType) {
+    return res.status(404).end();
+  }
+
+  res.set('Cache-Control', 'no-store');
+  res.type(user.avatarContentType).send(user.avatarImage);
+};
+
 export const changeCurrentUserPassword = async (
   req: AuthenticatedRequest,
   res: Response

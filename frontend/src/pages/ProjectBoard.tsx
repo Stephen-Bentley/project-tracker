@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { avatarSource } from '../utils/avatar';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   DragDropContext,
@@ -190,7 +191,7 @@ const ProjectBoard: React.FC = () => {
                                 <div className="task-avatar">
                                   {assignedUser(task)?.avatarUrl ? (
                                     <img
-                                      src={assignedUser(task)?.avatarUrl}
+                                      src={avatarSource(assignedUser(task)?.avatarUrl)}
                                       alt=""
                                     />
                                   ) : assignedUser(task) ? (

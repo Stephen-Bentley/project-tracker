@@ -21,6 +21,15 @@ export const updateCurrentUser = async (name: string, avatarUrl: string): Promis
   return res.data;
 };
 
+export const uploadCurrentUserAvatar = async (file: File): Promise<User> => {
+  const formData = new FormData();
+  formData.append('avatar', file);
+  const res = await api.post<User>('/users/me/avatar', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return res.data;
+};
+
 export const changeCurrentUserPassword = async (currentPassword: string, newPassword: string) => {
   await api.put('/users/me/password', { currentPassword, newPassword });
 };

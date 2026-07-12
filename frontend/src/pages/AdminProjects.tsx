@@ -1,5 +1,10 @@
 import React, { FormEvent, useEffect, useState } from 'react';
-import { createProject, getMyProjects } from '../api/projects';
+import {
+  addUserToProject,
+  createProject,
+  getMyProjects,
+  removeUserFromProject,
+} from '../api/projects';
 import { createUser, getUsers } from '../api/users';
 import { Project } from '../types/projects';
 import { User } from '../types';
@@ -20,6 +25,8 @@ const AdminProjectsPage: React.FC = () => {
   const [userName, setUserName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [selectedUsers, setSelectedUsers] = useState<Record<string, string>>({});
+  const [memberAction, setMemberAction] = useState('');
 
   useEffect(() => {
     Promise.all([getMyProjects(), getUsers()])
@@ -73,6 +80,58 @@ const AdminProjectsPage: React.FC = () => {
     }
   };
 
+  const addMember = async (project: Project) => {
+    const userId = selectedUsers[project._id];
+    if (!userId) return;
+
+    setMemberAction(`${project._id}-${userId}`);
+    setError('');
+    setNotice('');
+    try {
+      await addUserToProject(project._id, userId);
+      const user = users.find((candidate) => candidate._id === userId);
+      if (user) {
+        setProjects((current) =>
+          current.map((candidate) =>
+            candidate._id === project._id
+              ? { ...candidate, members: [...candidate.members, user] }
+              : candidate
+          )
+        );
+      }
+      setSelectedUsers((current) => ({ ...current, [project._id]: '' }));
+      setNotice('User added to project.');
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Unable to add user to project.');
+    } finally {
+      setMemberAction('');
+    }
+  };
+
+  const removeMember = async (project: Project, user: User) => {
+    setMemberAction(`${project._id}-${user._id}`);
+    setError('');
+    setNotice('');
+    try {
+      await removeUserFromProject(project._id, user._id);
+      setProjects((current) =>
+        current.map((candidate) =>
+          candidate._id === project._id
+            ? {
+                ...candidate,
+                members: candidate.members.filter((member) => member._id !== user._id),
+              }
+            : candidate
+        )
+      );
+      setNotice('User removed from project.');
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Unable to remove user from project.');
+    } finally {
+      setMemberAction('');
+    }
+  };
+
   return (
     <main className="admin-page">
       <p className="admin-eyebrow">Workspace control</p>
@@ -116,6 +175,55 @@ const AdminProjectsPage: React.FC = () => {
                     {project.members.length} member
                     {project.members.length === 1 ? '' : 's'}
                   </small>
+                  <div className="project-members">
+                    <strong>Members</strong>
+                    <ul>
+                      {project.members.map((member) => (
+                        <li key={member._id}>
+                          <span>{member.name}</span>
+                          <button
+                            type="button"
+                            className="remove-member"
+                            disabled={memberAction === `${project._id}-${member._id}`}
+                            onClick={() => removeMember(project, member)}
+                          >
+                            {memberAction === `${project._id}-${member._id}` ? 'Removing...' : 'Remove'}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                    <div className="add-member">
+                      <select
+                        aria-label={`Add a user to ${project.name}`}
+                        value={selectedUsers[project._id] || ''}
+                        onChange={(event) =>
+                          setSelectedUsers((current) => ({
+                            ...current,
+                            [project._id]: event.target.value,
+                          }))
+                        }
+                      >
+                        <option value="">Add a user...</option>
+                        {users
+                          .filter(
+                            (user) =>
+                              !project.members.some((member) => member._id === user._id)
+                          )
+                          .map((user) => (
+                            <option key={user._id} value={user._id}>
+                              {user.name} ({user.email})
+                            </option>
+                          ))}
+                      </select>
+                      <button
+                        type="button"
+                        disabled={!selectedUsers[project._id] || memberAction.startsWith(`${project._id}-`)}
+                        onClick={() => addMember(project)}
+                      >
+                        Add
+                      </button>
+                    </div>
+                  </div>
                 </article>
               ))}
             </div>

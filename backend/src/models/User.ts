@@ -7,6 +7,8 @@ export interface IUser extends Document {
   password: string;
   role: 'admin' | 'user';
   avatarUrl?: string;
+  avatarImage?: Buffer;
+  avatarContentType?: string;
   comparePassword(candidatePassword: string): Promise<boolean>;
 }
 
@@ -39,6 +41,14 @@ const UserSchema = new Schema<IUser>(
       type: String,
       trim: true,
       default: '',
+    },
+    avatarImage: {
+      type: Buffer,
+      select: false,
+    },
+    avatarContentType: {
+      type: String,
+      select: false,
     },
   },
   {

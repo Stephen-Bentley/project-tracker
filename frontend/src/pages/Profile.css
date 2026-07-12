@@ -30,6 +30,9 @@
   gap: 22px;
   grid-template-columns: minmax(220px, 0.65fr) minmax(0, 1.35fr);
 }
+.password-form {
+  grid-column: 2;
+}
 .profile-card {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -101,6 +104,9 @@
   color: var(--muted);
   font-size: 0.82rem;
   margin: -8px 0 0;
+}
+.form-error {
+  color: #dc2626;
 }
 .theme-choice {
   align-items: center;
@@ -180,5 +186,8 @@
   }
   .profile-grid {
     grid-template-columns: 1fr;
+  }
+  .password-form {
+    grid-column: auto;
   }
 }

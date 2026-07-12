@@ -1,6 +1,12 @@
 import React, { FormEvent, useEffect, useState } from 'react';
-import { getCurrentUser, updateCurrentUser } from '../api/users';
+import {
+  changeCurrentUserPassword,
+  getCurrentUser,
+  uploadCurrentUserAvatar,
+  updateCurrentUser,
+} from '../api/users';
 import { User } from '../types';
+import { avatarSource } from '../utils/avatar';
 import './Profile.css';
 
 interface ProfileProps {
@@ -20,8 +26,15 @@ const Profile: React.FC<ProfileProps> = ({ darkMode, onThemeChange }) => {
   const [user, setUser] = useState<User | null>(null);
   const [name, setName] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
+  const [avatarLoadFailed, setAvatarLoadFailed] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [passwordMessage, setPasswordMessage] = useState('');
 
   useEffect(() => {
     getCurrentUser()
@@ -29,6 +42,7 @@ const Profile: React.FC<ProfileProps> = ({ darkMode, onThemeChange }) => {
         setUser(currentUser);
         setName(currentUser.name);
         setAvatarUrl(currentUser.avatarUrl || '');
+        setAvatarLoadFailed(false);
       })
       .catch(() => setMessage('Unable to load your profile.'));
   }, []);
@@ -42,6 +56,7 @@ const Profile: React.FC<ProfileProps> = ({ darkMode, onThemeChange }) => {
       setUser(updatedUser);
       setName(updatedUser.name);
       setAvatarUrl(updatedUser.avatarUrl || '');
+      setAvatarLoadFailed(false);
       setMessage('Profile saved.');
     } catch (error: any) {
       setMessage(
@@ -49,6 +64,49 @@ const Profile: React.FC<ProfileProps> = ({ darkMode, onThemeChange }) => {
       );
     } finally {
       setSaving(false);
+    }
+  };
+
+  const uploadAvatar = async (file?: File) => {
+    if (!file) return;
+
+    setUploadingAvatar(true);
+    setMessage('');
+    try {
+      const updatedUser = await uploadCurrentUserAvatar(file);
+      setUser(updatedUser);
+      setAvatarUrl(updatedUser.avatarUrl || '');
+      setAvatarLoadFailed(false);
+      setMessage('Profile image uploaded.');
+    } catch (error: any) {
+      setMessage(error.response?.data?.message || 'Unable to upload your image.');
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
+
+  const changePassword = async (event: FormEvent) => {
+    event.preventDefault();
+    setPasswordMessage('');
+
+    if (newPassword !== confirmPassword) {
+      setPasswordMessage('New passwords do not match.');
+      return;
+    }
+
+    setChangingPassword(true);
+    try {
+      await changeCurrentUserPassword(currentPassword, newPassword);
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      setPasswordMessage('Password updated successfully.');
+    } catch (error: any) {
+      setPasswordMessage(
+        error.response?.data?.message || 'Unable to update your password.'
+      );
+    } finally {
+      setChangingPassword(false);
     }
   };
 
@@ -67,13 +125,11 @@ const Profile: React.FC<ProfileProps> = ({ darkMode, onThemeChange }) => {
       <div className="profile-grid">
         <section className="profile-card profile-preview">
           <div className="profile-avatar">
-            {avatarUrl ? (
+            {avatarUrl && !avatarLoadFailed ? (
               <img
-                src={avatarUrl}
+                src={avatarSource(avatarUrl)}
                 alt="Profile"
-                onError={(event) => {
-                  event.currentTarget.style.display = 'none';
-                }}
+                onError={() => setAvatarLoadFailed(true)}
               />
             ) : (
               initials(displayName)
@@ -93,16 +149,21 @@ const Profile: React.FC<ProfileProps> = ({ darkMode, onThemeChange }) => {
             />
           </label>
           <label>
-            Profile image URL
+            Profile image
             <input
-              type="url"
-              placeholder="https://example.com/me.jpg"
-              value={avatarUrl}
-              onChange={(event) => setAvatarUrl(event.target.value)}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              disabled={uploadingAvatar}
+              onChange={(event) => {
+                setAvatarLoadFailed(false);
+                uploadAvatar(event.target.files?.[0]);
+              }}
             />
           </label>
           <p className="form-help">
-            Use a public image URL. Leave it empty to show your initials.
+            {uploadingAvatar
+              ? 'Uploading image...'
+              : 'Upload a JPG, PNG, WebP, or GIF image up to 5 MB.'}
           </p>
           <div className="theme-choice">
             <div>
@@ -121,6 +182,48 @@ const Profile: React.FC<ProfileProps> = ({ darkMode, onThemeChange }) => {
           {message && <p className="profile-message">{message}</p>}
           <button className="primary-action" disabled={saving}>
             {saving ? 'Saving...' : 'Save changes'}
+          </button>
+        </form>
+        <form className="profile-card profile-form password-form" onSubmit={changePassword}>
+          <h2>Reset password</h2>
+          <p className="form-help">
+            Choose a new password with at least six characters.
+          </p>
+          <label>
+            Current password
+            <input
+              required
+              type="password"
+              autoComplete="current-password"
+              value={currentPassword}
+              onChange={(event) => setCurrentPassword(event.target.value)}
+            />
+          </label>
+          <label>
+            New password
+            <input
+              required
+              minLength={6}
+              type="password"
+              autoComplete="new-password"
+              value={newPassword}
+              onChange={(event) => setNewPassword(event.target.value)}
+            />
+          </label>
+          <label>
+            Confirm new password
+            <input
+              required
+              minLength={6}
+              type="password"
+              autoComplete="new-password"
+              value={confirmPassword}
+              onChange={(event) => setConfirmPassword(event.target.value)}
+            />
+          </label>
+          {passwordMessage && <p className="profile-message">{passwordMessage}</p>}
+          <button className="primary-action" disabled={changingPassword}>
+            {changingPassword ? 'Updating...' : 'Update password'}
           </button>
         </form>
       </div>

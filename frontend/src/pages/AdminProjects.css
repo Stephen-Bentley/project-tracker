@@ -89,6 +89,70 @@
   color: var(--accent);
   font-weight: 700;
 }
+.project-members {
+  border-top: 1px solid var(--border);
+  margin-top: 16px;
+  padding-top: 14px;
+}
+.project-members strong {
+  color: var(--text);
+  font-size: 0.86rem;
+}
+.project-members ul {
+  list-style: none;
+  margin: 9px 0 12px;
+  padding: 0;
+}
+.project-members li {
+  align-items: center;
+  color: var(--text);
+  display: flex;
+  font-size: 0.88rem;
+  gap: 8px;
+  justify-content: space-between;
+  padding: 5px 0;
+}
+.remove-member,
+.add-member button {
+  background: transparent;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 5px 8px;
+}
+.remove-member:hover {
+  border-color: #dc2626;
+  color: #dc2626;
+}
+.add-member {
+  display: flex;
+  gap: 8px;
+}
+.add-member select {
+  background: var(--input);
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  color: var(--text);
+  flex: 1;
+  font: inherit;
+  font-size: 0.82rem;
+  min-width: 0;
+  padding: 7px;
+}
+.add-member button {
+  background: #15803d;
+  border-color: #15803d;
+  color: #fff;
+}
+.remove-member:disabled,
+.add-member button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
 .admin-form {
   display: flex;
   flex-direction: column;
