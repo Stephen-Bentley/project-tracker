@@ -5,6 +5,7 @@ import Dashboard from "./pages/Dashboard";
 import Projects from "./pages/Projects";
 import ProjectBoard from "./pages/ProjectBoard";
 import AdminProjectsPage from "./pages/AdminProjects";
+import Navigation from "./components/Navigation";
 
 const App: React.FC = () => {
   // Grab token and role from localStorage
@@ -14,6 +15,7 @@ const App: React.FC = () => {
 
   return (
     <BrowserRouter>
+      {isAuthenticated && <Navigation isAdmin={role === "admin"} />}
       <Routes>
         {/* Login Page */}
         <Route

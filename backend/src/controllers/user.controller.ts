@@ -1,6 +1,11 @@
 import { Request, Response } from 'express';
 import User from '../models/User';
 
+export const getUsers = async (_req: Request, res: Response) => {
+  const users = await User.find().select('name email role').sort({ name: 1 });
+  res.json(users);
+};
+
 export const createUser = async (req: Request, res: Response) => {
   const { name, email, password, role } = req.body;
 
@@ -22,7 +27,7 @@ export const createUser = async (req: Request, res: Response) => {
   });
 
   res.status(201).json({
-    id: user._id,
+    _id: user._id,
     name: user.name,
     email: user.email,
     role: user.role

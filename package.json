@@ -1,0 +1,15 @@
+{
+  "name": "project-tracker",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "concurrently --names backend,frontend --prefix-colors blue,green \"npm run dev --prefix backend\" \"npm start --prefix frontend\"",
+    "build": "npm run build --prefix backend && npm run build --prefix frontend",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "prettier": "^3.6.2"
+  }
+}
