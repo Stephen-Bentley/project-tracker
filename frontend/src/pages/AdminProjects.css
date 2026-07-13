@@ -1,0 +1,204 @@
+.admin-page {
+  margin: 0 auto;
+  max-width: 1080px;
+  padding: 46px 24px;
+}
+.admin-eyebrow {
+  color: var(--accent);
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  margin: 0 0 7px;
+  text-transform: uppercase;
+}
+.admin-page h1 {
+  color: var(--text);
+  font-size: 2.25rem;
+  letter-spacing: -0.04em;
+  margin: 0 0 24px;
+}
+.admin-tabs {
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  gap: 8px;
+  margin-bottom: 26px;
+  padding-bottom: 12px;
+}
+.admin-tabs button {
+  background: transparent;
+  border: 0;
+  border-radius: 7px;
+  color: var(--muted);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  padding: 9px 13px;
+}
+.admin-tabs button.active {
+  background: #15803d;
+  color: #fff;
+}
+.admin-alert {
+  border-radius: 8px;
+  margin: 0 0 18px;
+  padding: 12px 14px;
+}
+.admin-alert.error {
+  background: #fee2e2;
+  color: #991b1b;
+}
+.admin-alert.success {
+  background: #dcfce7;
+  color: #166534;
+}
+.admin-section h2 {
+  color: var(--text);
+  font-size: 1.35rem;
+  margin: 0 0 18px;
+}
+.admin-empty,
+.admin-loading,
+.admin-summary {
+  color: var(--muted);
+}
+.admin-grid {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: repeat(auto-fill, minmax(245px, 1fr));
+}
+.admin-project-card,
+.admin-form {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  padding: 22px;
+}
+.admin-project-card {
+  border-top: 4px solid #22c55e;
+}
+.admin-project-card h3 {
+  color: var(--text);
+  margin: 0 0 9px;
+}
+.admin-project-card p {
+  color: var(--muted);
+  line-height: 1.45;
+}
+.admin-project-card small {
+  color: var(--accent);
+  font-weight: 700;
+}
+.project-members {
+  border-top: 1px solid var(--border);
+  margin-top: 16px;
+  padding-top: 14px;
+}
+.project-members strong {
+  color: var(--text);
+  font-size: 0.86rem;
+}
+.project-members ul {
+  list-style: none;
+  margin: 9px 0 12px;
+  padding: 0;
+}
+.project-members li {
+  align-items: center;
+  color: var(--text);
+  display: flex;
+  font-size: 0.88rem;
+  gap: 8px;
+  justify-content: space-between;
+  padding: 5px 0;
+}
+.remove-member,
+.add-member button {
+  background: transparent;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 5px 8px;
+}
+.remove-member:hover {
+  border-color: #dc2626;
+  color: #dc2626;
+}
+.add-member {
+  display: flex;
+  gap: 8px;
+}
+.add-member select {
+  background: var(--input);
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  color: var(--text);
+  flex: 1;
+  font: inherit;
+  font-size: 0.82rem;
+  min-width: 0;
+  padding: 7px;
+}
+.add-member button {
+  background: #15803d;
+  border-color: #15803d;
+  color: #fff;
+}
+.remove-member:disabled,
+.add-member button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+.admin-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 560px;
+}
+.admin-form label {
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  font-size: 0.9rem;
+  font-weight: 700;
+  gap: 7px;
+}
+.admin-form input,
+.admin-form textarea {
+  background: var(--input);
+  border: 1px solid var(--border-strong);
+  border-radius: 7px;
+  color: var(--text);
+  font: inherit;
+  padding: 10px 12px;
+}
+.admin-form textarea {
+  min-height: 105px;
+  resize: vertical;
+}
+.admin-form button {
+  align-self: flex-start;
+  background: #15803d;
+  border: 0;
+  border-radius: 7px;
+  color: #fff;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  padding: 11px 15px;
+}
+.admin-form button:disabled {
+  opacity: 0.7;
+}
+@media (max-width: 600px) {
+  .admin-page {
+    padding: 30px 16px;
+  }
+  .admin-tabs {
+    overflow-x: auto;
+  }
+}
