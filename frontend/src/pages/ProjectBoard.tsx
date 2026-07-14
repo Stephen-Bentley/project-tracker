@@ -28,6 +28,7 @@ const ProjectBoard: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
 
+  const [ProjectName, setProjectName] = useState('');
   const [tasks, setTasks] = useState<Task[]>([]);
   const [members, setMembers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -44,6 +45,7 @@ const ProjectBoard: React.FC = () => {
           getTasksByProject(projectId),
           getProjectById(projectId),
         ]);
+        setProjectName(projectData.name);
         setTasks(tasksData);
         setMembers(projectData.members);
       } catch (err) {
@@ -58,11 +60,11 @@ const ProjectBoard: React.FC = () => {
     load();
   }, [projectId, navigate]);
 
-  const handleCreateTask = async (title: string, description?: string) => {
+  const handleCreateTask = async (title: string, description?: string, assignedTo?: string) => {
     if (!projectId) return;
 
     try {
-      await createTask(projectId, title, description);
+      await createTask(projectId, title, description, assignedTo);
       const updatedTasks = await getTasksByProject(projectId);
       setTasks(updatedTasks);
       setShowModal(false);
@@ -146,7 +148,7 @@ const ProjectBoard: React.FC = () => {
     <main className="board-page">
       <div className="board-toolbar">
         <div>
-          <p className="board-eyebrow">Project workspace</p>
+          <p className="board-eyebrow">{ProjectName}</p>
           <h1 className="board-title">Project Board</h1>
         </div>
         <button className="add-task-button" onClick={() => setShowModal(true)}>
@@ -243,8 +245,11 @@ const ProjectBoard: React.FC = () => {
 
       {showModal && (
         <CreateTaskModal
+          members={members}
           onClose={() => setShowModal(false)}
-          onCreate={handleCreateTask}
+          onCreate={async (title, description, assignedTo) => {
+            await handleCreateTask(title, description, assignedTo);
+          }}
         />
       )}
       {selectedTask && (
