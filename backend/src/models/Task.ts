@@ -1,6 +1,11 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
-export type TaskStatus = 'todo' | 'in_progress' | 'done';
+export type TaskStatus =
+  | 'todo'
+  | 'in_progress'
+  | 'code_review'
+  | 'completed'
+  | 'done';
 
 export interface ITaskImage {
   _id?: mongoose.Types.ObjectId;
@@ -50,7 +55,7 @@ const TaskSchema = new Schema<ITask>(
 
     status: {
       type: String,
-      enum: ['todo', 'in_progress', 'done'],
+      enum: ['todo', 'in_progress', 'code_review', 'completed', 'done'],
       default: 'todo',
       index: true,
     },

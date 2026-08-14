@@ -1,17 +1,15 @@
 import React from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink } from 'react-router-dom';
 
 interface NavigationProps {
   isAdmin: boolean;
 }
 
 const Navigation: React.FC<NavigationProps> = ({ isAdmin }) => {
-  const navigate = useNavigate();
-
   const logout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('role');
-    navigate('/login');
+    window.location.replace('/login');
   };
 
   const linkStyle = ({ isActive }: { isActive: boolean }) => ({

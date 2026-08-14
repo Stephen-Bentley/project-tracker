@@ -13,6 +13,12 @@
   margin-bottom: 30px;
 }
 
+.board-actions {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+}
+
 .board-eyebrow {
   color: var(--muted);
   font-size: 0.8rem;
@@ -28,6 +34,51 @@
   letter-spacing: -0.04em;
   margin: 0;
 }
+
+.board-filters {
+  align-items: end;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px 24px;
+  margin-bottom: 24px;
+}
+
+.board-filter {
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  font-size: 0.82rem;
+  font-weight: 700;
+  gap: 6px;
+}
+
+.board-filter select {
+  background: var(--input);
+  border: 1px solid var(--border-strong);
+  border-radius: 7px;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.87rem;
+  min-width: 190px;
+  padding: 9px 11px;
+}
+
+.completed-filter {
+  align-items: center;
+  color: var(--text);
+  display: flex;
+  font-size: 0.87rem;
+  font-weight: 700;
+  gap: 8px;
+  min-height: 38px;
+}
+
+.completed-filter input {
+  accent-color: var(--accent);
+  height: 16px;
+  width: 16px;
+}
+
 .add-task-button {
   background: #15803d;
   border: 0;
@@ -52,6 +103,9 @@
   grid-template-columns: repeat(3, minmax(260px, 1fr));
   overflow-x: auto;
   padding-bottom: 12px;
+}
+.board--4 {
+  grid-template-columns: repeat(4, minmax(260px, 1fr));
 }
 .board-column {
   background: var(--surface-soft);
@@ -94,8 +148,11 @@
 .board-column--in_progress .column-title {
   color: #2563eb;
 }
-.board-column--done .column-title {
+.board-column--code_review .column-title {
   color: #15803d;
+}
+.board-column--completed .column-title {
+  color: #64748b;
 }
 .column-dropzone {
   min-height: 480px;
@@ -133,8 +190,11 @@
 .board-column--in_progress .task-card {
   border-left-color: #3b82f6;
 }
-.board-column--done .task-card {
+.board-column--code_review .task-card {
   border-left-color: #22c55e;
+}
+.board-column--completed .task-card {
+  border-left-color: #64748b;
 }
 .task-title {
   color: var(--text);
@@ -364,6 +424,12 @@
     align-items: flex-start;
     flex-direction: column;
     gap: 14px;
+  }
+  .board-actions {
+    width: 100%;
+  }
+  .add-task-button {
+    width: 100%;
   }
   .board {
     grid-template-columns: repeat(3, minmax(260px, 82vw));
