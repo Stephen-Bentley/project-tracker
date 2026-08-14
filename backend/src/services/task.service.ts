@@ -25,6 +25,14 @@ export class TaskService {
       assignedTo: assignedTo ? new mongoose.Types.ObjectId(assignedTo) : null,
       status: status,
       createdBy: creatorId,
+      activities: [
+        {
+          type: 'created',
+          message: 'Task created',
+          actor: new mongoose.Types.ObjectId(creatorId),
+          createdAt: new Date(),
+        },
+      ],
     });
 
     return task;
@@ -43,10 +51,12 @@ export class TaskService {
     // To keep it simple, I'll do the check in the controller for now or a helper
     return await Task.find({ project: project._id })
       .populate('assignedTo', 'name email avatarUrl')
-      .populate('createdBy', 'name email');
+      .populate('createdBy', 'name email')
+      .populate('comments.author', 'name email avatarUrl')
+      .populate('activities.actor', 'name email avatarUrl');
   }
 
-  static async updateTask(taskId: string, updates: any) {
+  static async updateTask(taskId: string, updates: any, actorId: string) {
     const task = await Task.findById(taskId);
     if (!task) {
       const error = new Error('Task not found');
@@ -61,6 +71,20 @@ export class TaskService {
       throw error;
     }
 
+    const activities: {
+      type: string;
+      message: string;
+      actor: mongoose.Types.ObjectId;
+      createdAt: Date;
+    }[] = [];
+    const statusLabels: Record<string, string> = {
+      todo: 'To do',
+      in_progress: 'In progress',
+      code_review: 'Code review',
+      completed: 'Completed',
+      done: 'Code review',
+    };
+
     // Apply updates
     if (updates.title !== undefined) task.title = updates.title;
     if (updates.description !== undefined) task.description = updates.description;
@@ -70,21 +94,53 @@ export class TaskService {
         updates.status
       )
     ) {
+      if (task.status !== updates.status) {
+        activities.push({
+          type: 'status_changed',
+          message: `Status changed from ${statusLabels[task.status]} to ${statusLabels[updates.status]}`,
+          actor: new mongoose.Types.ObjectId(actorId),
+          createdAt: new Date(),
+        });
+      }
       task.status = updates.status;
     }
+    if (
+      updates.title !== undefined ||
+      updates.description !== undefined
+    ) {
+      activities.push({
+        type: 'details_updated',
+        message: 'Task details updated',
+        actor: new mongoose.Types.ObjectId(actorId),
+        createdAt: new Date(),
+      });
+    }
     if (updates.assignedTo !== undefined) {
+      const previousAssignee = task.assignedTo?.toString() || null;
+      const nextAssignee = updates.assignedTo || null;
       if (updates.assignedTo === null || updates.assignedTo === '') {
         task.assignedTo = null;
       } else {
         task.assignedTo = new mongoose.Types.ObjectId(updates.assignedTo);
       }
+      if (previousAssignee !== nextAssignee) {
+        activities.push({
+          type: 'assigned',
+          message: nextAssignee ? 'Task assignee changed' : 'Task unassigned',
+          actor: new mongoose.Types.ObjectId(actorId),
+          createdAt: new Date(),
+        });
+      }
     }
+
+    if (!task.activities) task.activities = [];
+    task.activities.push(...activities);
 
     await task.save();
     return task;
   }
 
-  static async uploadTaskImages(taskId: string, images: any[]) {
+  static async uploadTaskImages(taskId: string, images: any[], actorId: string) {
     const task = await Task.findById(taskId).select('+images.data');
     if (!task) {
       const error = new Error('Task not found');
@@ -106,6 +162,14 @@ export class TaskService {
         uploadedAt: new Date(),
       }))
     );
+
+    if (!task.activities) task.activities = [];
+    task.activities.push({
+      type: 'images_added',
+      message: `${images.length} image${images.length === 1 ? '' : 's'} added`,
+      actor: new mongoose.Types.ObjectId(actorId),
+      createdAt: new Date(),
+    });
 
     await task.save();
     return task;
@@ -143,7 +207,11 @@ export class TaskService {
     return { message: 'Task deleted' };
   }
 
-  static async assignUserToTask(taskId: string, userId: string | null) {
+  static async assignUserToTask(
+    taskId: string,
+    userId: string | null,
+    actorId: string
+  ) {
     const task = await Task.findById(taskId);
     if (!task) {
       const error = new Error('Task not found');
@@ -151,10 +219,21 @@ export class TaskService {
       throw error;
     }
 
+    const previousAssignee = task.assignedTo?.toString() || null;
     if (userId) {
       task.assignedTo = new mongoose.Types.ObjectId(userId);
     } else {
       task.assignedTo = null;
+    }
+
+    if (previousAssignee !== userId) {
+      if (!task.activities) task.activities = [];
+      task.activities.push({
+        type: 'assigned',
+        message: userId ? 'Task assignee changed' : 'Task unassigned',
+        actor: new mongoose.Types.ObjectId(actorId),
+        createdAt: new Date(),
+      });
     }
 
     await task.save();
@@ -164,5 +243,32 @@ export class TaskService {
       taskId: task._id,
       assignedTo: task.assignedTo,
     };
+  }
+
+  static async addComment(taskId: string, body: string, authorId: string) {
+    const task = await Task.findById(taskId);
+    if (!task) {
+      const error = new Error('Task not found');
+      (error as any).status = 404;
+      throw error;
+    }
+
+    if (!task.comments) task.comments = [];
+    if (!task.activities) task.activities = [];
+
+    task.comments.push({
+      author: new mongoose.Types.ObjectId(authorId),
+      body: body.trim(),
+      createdAt: new Date(),
+    });
+    task.activities.push({
+      type: 'comment_added',
+      message: 'Comment added',
+      actor: new mongoose.Types.ObjectId(authorId),
+      createdAt: new Date(),
+    });
+
+    await task.save();
+    return task;
   }
 }
