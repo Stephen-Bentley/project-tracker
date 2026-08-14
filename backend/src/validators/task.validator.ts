@@ -10,7 +10,9 @@ export const createTaskSchema = z.object({
     assignedTo: z.string().refine((val) => /^[0-9a-fA-F]{24}$/.test(val), {
       message: 'Invalid userId',
     }).optional().nullable(),
-    status: z.enum(['todo', 'in_progress', 'done']).optional(),
+    status: z
+      .enum(['todo', 'in_progress', 'code_review', 'completed', 'done'])
+      .optional(),
   }),
 });
 
@@ -23,7 +25,9 @@ export const updateTaskSchema = z.object({
   body: z.object({
     title: z.string().optional(),
     description: z.string().optional(),
-    status: z.enum(['todo', 'in_progress', 'done']).optional(),
+    status: z
+      .enum(['todo', 'in_progress', 'code_review', 'completed', 'done'])
+      .optional(),
     assignedTo: z.string().refine((val) => /^[0-9a-fA-F]{24}$/.test(val), {
       message: 'Invalid userId',
     }).optional().nullable(),

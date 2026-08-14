@@ -1,5 +1,5 @@
 import React, { FormEvent, useEffect, useState } from 'react';
-import { Task } from '../types/task';
+import { Task, TaskStatus } from '../types/task';
 import { User } from '../types';
 import { apiAssetSource } from '../utils/avatar';
 
@@ -10,7 +10,8 @@ interface Props {
   onSave: (
     title: string,
     description: string,
-    assignedTo: string
+    assignedTo: string,
+    status: TaskStatus
   ) => Promise<void>;
   onUpload: (files: File[]) => Promise<void>;
 }
@@ -29,6 +30,7 @@ const TaskDetailsModal: React.FC<Props> = ({
       ? task.assignedTo?._id || ''
       : task.assignedTo || ''
   );
+  const [status, setStatus] = useState<TaskStatus>(task.status);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState('');
@@ -41,6 +43,7 @@ const TaskDetailsModal: React.FC<Props> = ({
         ? task.assignedTo?._id || ''
         : task.assignedTo || ''
     );
+    setStatus(task.status === 'done' ? 'code_review' : task.status);
   }, [task]);
 
   const save = async (event: FormEvent) => {
@@ -48,7 +51,7 @@ const TaskDetailsModal: React.FC<Props> = ({
     setMessage('');
     setSaving(true);
     try {
-      await onSave(title, description, assignedTo);
+      await onSave(title, description, assignedTo, status);
       setMessage('Task saved.');
     } catch (error: any) {
       setMessage(error.response?.data?.message || 'Unable to save the task.');
@@ -128,6 +131,18 @@ const TaskDetailsModal: React.FC<Props> = ({
                   {member.name}
                 </option>
               ))}
+            </select>
+          </label>
+          <label>
+            Status
+            <select
+              value={status}
+              onChange={(event) => setStatus(event.target.value as TaskStatus)}
+            >
+              <option value="todo">To do</option>
+              <option value="in_progress">In progress</option>
+              <option value="code_review">Code review</option>
+              <option value="completed">Completed</option>
             </select>
           </label>
 

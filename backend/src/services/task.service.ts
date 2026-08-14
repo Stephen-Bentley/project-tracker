@@ -64,7 +64,12 @@ export class TaskService {
     // Apply updates
     if (updates.title !== undefined) task.title = updates.title;
     if (updates.description !== undefined) task.description = updates.description;
-    if (updates.status && ['todo', 'in_progress', 'done'].includes(updates.status)) {
+    if (
+      updates.status &&
+      ['todo', 'in_progress', 'code_review', 'completed', 'done'].includes(
+        updates.status
+      )
+    ) {
       task.status = updates.status;
     }
     if (updates.assignedTo !== undefined) {
