@@ -10,10 +10,12 @@ import {
 } from '../controllers/task.controller';
 import { authenticate } from '../middleware/auth.middleware';
 import { taskImageUpload } from '../middleware/upload.middleware';
+import { validate } from '../middleware/validate.middleware';
+import { createTaskSchema, updateTaskSchema } from '../validators/task.validator';
 
 const router = Router();
 
-router.post('/', authenticate, createTask);
+router.post('/', authenticate, validate(createTaskSchema), createTask);
 router.get('/project/:projectId', authenticate, getTasksByProject);
 // The browser loads image elements without the API authorization header.
 router.get('/:taskId/images/:imageId', getTaskImage);
@@ -28,7 +30,7 @@ router.post(
   },
   uploadTaskImages
 );
-router.put('/:taskId', authenticate, updateTask);
+router.put('/:taskId', authenticate, validate(updateTaskSchema), updateTask);
 router.delete('/:taskId', authenticate, deleteTask);
 router.put('/:taskId/assign', authenticate, assignUserToTask);
 
