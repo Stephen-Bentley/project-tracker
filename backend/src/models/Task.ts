@@ -15,6 +15,21 @@ export interface ITaskImage {
   uploadedAt: Date;
 }
 
+export interface ITaskComment {
+  _id?: mongoose.Types.ObjectId;
+  author: mongoose.Types.ObjectId;
+  body: string;
+  createdAt: Date;
+}
+
+export interface ITaskActivity {
+  _id?: mongoose.Types.ObjectId;
+  type: string;
+  message: string;
+  actor: mongoose.Types.ObjectId;
+  createdAt: Date;
+}
+
 export interface ITask extends Document {
   title: string;
   description?: string;
@@ -25,6 +40,8 @@ export interface ITask extends Document {
   createdAt: Date;
   updatedAt: Date;
   images: ITaskImage[];
+  comments: ITaskComment[];
+  activities: ITaskActivity[];
 }
 
 const TaskSchema = new Schema<ITask>(
@@ -72,6 +89,23 @@ const TaskSchema = new Schema<ITask>(
         contentType: { type: String, required: true },
         data: { type: Buffer, required: true, select: false },
         uploadedAt: { type: Date, default: Date.now },
+      },
+    ],
+
+    comments: [
+      {
+        author: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+        body: { type: String, required: true, trim: true, maxlength: 2000 },
+        createdAt: { type: Date, default: Date.now },
+      },
+    ],
+
+    activities: [
+      {
+        type: { type: String, required: true },
+        message: { type: String, required: true, trim: true },
+        actor: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+        createdAt: { type: Date, default: Date.now },
       },
     ],
   },

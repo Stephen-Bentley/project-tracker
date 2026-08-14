@@ -33,3 +33,14 @@ export const updateTaskSchema = z.object({
     }).optional().nullable(),
   }).optional(),
 });
+
+export const createTaskCommentSchema = z.object({
+  params: z.object({
+    taskId: z.string().refine((val) => /^[0-9a-fA-F]{24}$/.test(val), {
+      message: 'Invalid taskId',
+    }),
+  }),
+  body: z.object({
+    body: z.string().trim().min(1, 'Comment cannot be empty').max(2000),
+  }),
+});

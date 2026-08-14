@@ -55,8 +55,34 @@ export const updateTask = async (req: AuthRequest, res: Response) => {
     return res.status(403).json({ message: 'Not a project member' });
   }
 
-  const updatedTask = await TaskService.updateTask(taskId, req.body);
+  const updatedTask = await TaskService.updateTask(
+    taskId,
+    req.body,
+    req.user!.userId
+  );
   res.json(updatedTask);
+};
+
+export const addTaskComment = async (req: AuthRequest, res: Response) => {
+  const taskId = Array.isArray(req.params.taskId)
+    ? req.params.taskId[0]
+    : req.params.taskId;
+  const task = await Task.findById(taskId);
+  if (!task) return res.status(404).json({ message: 'Task not found' });
+
+  const project = await Project.findById(task.project);
+  if (!project) return res.status(404).json({ message: 'Project not found' });
+
+  if (!project.members.some((id) => id.toString() === req.user!.userId)) {
+    return res.status(403).json({ message: 'Not a project member' });
+  }
+
+  const updatedTask = await TaskService.addComment(
+    taskId,
+    req.body.body,
+    req.user!.userId
+  );
+  res.status(201).json(updatedTask);
 };
 
 export const uploadTaskImages = async (req: AuthRequest, res: Response) => {
@@ -71,7 +97,11 @@ export const uploadTaskImages = async (req: AuthRequest, res: Response) => {
       .json({ message: 'Please select at least one image' });
   }
 
-  const task = await TaskService.uploadTaskImages(taskId, files);
+  const task = await TaskService.uploadTaskImages(
+    taskId,
+    files,
+    req.user!.userId
+  );
   res.status(201).json(task);
 };
 
@@ -94,6 +124,10 @@ export const assignUserToTask = async (req: AuthRequest, res: Response) => {
     ? req.params.taskId[0]
     : req.params.taskId;
   const userId = req.body.userId;
-  const result = await TaskService.assignUserToTask(taskId, userId);
+  const result = await TaskService.assignUserToTask(
+    taskId,
+    userId,
+    req.user!.userId
+  );
   res.json(result);
 };

@@ -16,6 +16,7 @@ import {
   updateTaskStatus,
   updateTaskDetails,
   uploadTaskImages,
+  addTaskComment,
 } from '../api/tasks';
 import { getProjectById } from '../api/projects';
 import CreateTaskModal from '../components/CreateTaskModal';
@@ -147,6 +148,12 @@ const ProjectBoard: React.FC = () => {
   const addTaskImages = async (files: File[]) => {
     if (!selectedTask) return;
     await uploadTaskImages(selectedTask._id, files);
+    await refreshTasks();
+  };
+
+  const addComment = async (body: string) => {
+    if (!selectedTask) return;
+    await addTaskComment(selectedTask._id, body);
     await refreshTasks();
   };
 
@@ -322,6 +329,7 @@ const ProjectBoard: React.FC = () => {
           onClose={() => setSelectedTask(null)}
           onSave={saveTaskDetails}
           onUpload={addTaskImages}
+          onComment={addComment}
         />
       )}
     </main>

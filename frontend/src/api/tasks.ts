@@ -57,3 +57,11 @@ export const uploadTaskImages = async (
   });
   return res.data;
 };
+
+export const addTaskComment = async (
+  taskId: string,
+  body: string
+): Promise<Task> => {
+  const res = await api.post<Task>(`/tasks/${taskId}/comments`, { body });
+  return res.data;
+};
