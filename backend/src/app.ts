@@ -5,6 +5,7 @@ import authRoutes from './routes/auth.routes';
 import userRoutes from './routes/user.routes';
 import projectRoutes from './routes/project.routes';
 import taskRoutes from './routes/task.routes';
+import { globalErrorHandler } from './middleware/error.middleware';
 
 const app = express();
 
@@ -19,5 +20,7 @@ app.use('/api/tasks', taskRoutes);
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok' });
 });
+
+app.use(globalErrorHandler);
 
 export default app;

@@ -9,7 +9,7 @@ const Dashboard: React.FC = () => {
   const logout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('role');
-    navigate('/login');
+    window.location.replace('/login');
   };
 
   const goToProjects = () => {

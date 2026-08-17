@@ -1,87 +1,129 @@
-import React, { useState } from 'react';
+import React, { FormEvent, useState } from 'react';
+import { User } from '../types';
 
 interface Props {
+  members: User[];
   onClose: () => void;
-  onCreate: (title: string, description?: string) => void;
+  onCreate: (
+    title: string,
+    description: string,
+    assignedTo: string
+  ) => Promise<void>;
 }
 
-const CreateTaskModal: React.FC<Props> = ({ onClose, onCreate }) => {
+const CreateTaskModal: React.FC<Props> = ({ members, onClose, onCreate }) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [assignedTo, setAssignedTo] = useState('');
+  const [creating, setCreating] = useState(false);
+  const [message, setMessage] = useState('');
 
-  const submit = () => {
-    if (!title.trim()) return alert('Title is required');
-    onCreate(title, description);
+  const create = async (event: FormEvent) => {
+    event.preventDefault();
+
+    if (!title.trim()) {
+      setMessage('Title is required.');
+      return;
+    }
+
+    setMessage('');
+    setCreating(true);
+
+    try {
+      await onCreate(title.trim(), description.trim(), assignedTo);
+      setMessage('Task created.');
+      onClose();
+    } catch (error: any) {
+      setMessage(error.response?.data?.message || 'Unable to create the task.');
+    } finally {
+      setCreating(false);
+    }
   };
 
   return (
-    <div style={styles.overlay}>
-      <div style={styles.modal}>
-        <h3 style={{ color: '#16a34a' }}>New Task</h3>
+    <div
+      className="task-modal-overlay"
+      role="presentation"
+      onMouseDown={onClose}
+    >
+      <section
+        className="task-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="create-task-modal-title"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <div className="task-modal-header">
+          <div>
+            <p>New task</p>
+            <h2 id="create-task-modal-title">Create task</h2>
+          </div>
 
-        <input
-          style={styles.input}
-          placeholder="Task title"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-        />
-
-        <textarea
-          style={styles.textarea}
-          placeholder="Description (optional)"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-        />
-
-        <div style={styles.actions}>
-          <button onClick={onClose}>Cancel</button>
-          <button style={styles.primary} onClick={submit}>
-            Create
+          <button
+            type="button"
+            className="task-modal-close"
+            onClick={onClose}
+            aria-label="Close create task modal"
+          >
+            ×
           </button>
         </div>
-      </div>
+
+        <form className="task-details-form" onSubmit={create}>
+          <label>
+            Heading
+            <input
+              required
+              value={title}
+              placeholder="Task title"
+              onChange={(event) => setTitle(event.target.value)}
+            />
+          </label>
+
+          <label>
+            Description
+            <textarea
+              value={description}
+              placeholder="Description optional"
+              onChange={(event) => setDescription(event.target.value)}
+            />
+          </label>
+
+          <label>
+            Assignee
+            <select
+              value={assignedTo}
+              onChange={(event) => setAssignedTo(event.target.value)}
+            >
+              <option value="">Unassigned</option>
+              {members.map((member) => (
+                <option key={member._id} value={member._id}>
+                  {member.name}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          {message && <p className="task-modal-message">{message}</p>}
+
+          <div className="task-modal-actions">
+            <button
+              type="button"
+              className="task-cancel"
+              onClick={onClose}
+              disabled={creating}
+            >
+              Cancel
+            </button>
+
+            <button type="submit" className="task-save" disabled={creating}>
+              {creating ? 'Creating...' : 'Create task'}
+            </button>
+          </div>
+        </form>
+      </section>
     </div>
   );
-};
-
-const styles: Record<string, React.CSSProperties> = {
-  overlay: {
-    position: 'fixed',
-    inset: 0,
-    background: 'rgba(0,0,0,0.4)',
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modal: {
-    background: '#fff',
-    padding: 20,
-    width: 400,
-    borderRadius: 8,
-  },
-  input: {
-    width: '100%',
-    padding: 10,
-    marginBottom: 10,
-  },
-  textarea: {
-    width: '100%',
-    padding: 10,
-    height: 80,
-  },
-  actions: {
-    display: 'flex',
-    justifyContent: 'flex-end',
-    gap: 10,
-    marginTop: 15,
-  },
-  primary: {
-    background: '#22c55e',
-    color: '#fff',
-    border: 'none',
-    padding: '6px 12px',
-    borderRadius: 4,
-  },
 };
 
 export default CreateTaskModal;

@@ -1,39 +1,21 @@
 import { Response } from 'express';
+import { AuthRequest } from '../middleware/auth.middleware';
 import Task, { TaskStatus } from '../models/Task';
 import Project from '../models/Project';
-import { AuthRequest } from '../middleware/auth.middleware';
-import mongoose from 'mongoose';
+import { TaskService } from '../services/task.service';
+import { validate } from '../middleware/validate.middleware';
+import { createTaskSchema, updateTaskSchema } from '../validators/task.validator';
 
 export const createTask = async (req: AuthRequest, res: Response) => {
   const { title, description, projectId, assignedTo, status } = req.body;
-
-  if (!title || !projectId) {
-    return res.status(400).json({ message: 'Title and projectId required' });
-  }
-
-  if (!mongoose.Types.ObjectId.isValid(projectId)) {
-    return res.status(400).json({ message: 'Invalid projectId' });
-  }
-
-  const project = await Project.findById(projectId);
-  if (!project) {
-    return res.status(404).json({ message: 'Project not found' });
-  }
-
-  // Permission: user must be a member
-  if (!project.members.some((id) => id.toString() === req.user!.userId)) {
-    return res.status(403).json({ message: 'Not a project member' });
-  }
-
-  const task = await Task.create({
+  const task = await TaskService.createTask(
     title,
     description,
-    project: project._id,
+    projectId,
     assignedTo,
-    status: (status as TaskStatus) || 'todo',
-    createdBy: req.user!.userId,
-  });
-
+    (status as TaskStatus) || 'todo',
+    req.user!.userId
+  );
   res.status(201).json(task);
 };
 
@@ -42,22 +24,14 @@ export const getTasksByProject = async (req: AuthRequest, res: Response) => {
     ? req.params.projectId[0]
     : req.params.projectId;
 
-  if (!mongoose.Types.ObjectId.isValid(projectId)) {
-    return res.status(400).json({ message: 'Invalid projectId' });
-  }
-
   const project = await Project.findById(projectId);
   if (!project) return res.status(404).json({ message: 'Project not found' });
 
-  // Permission: user must be a member
   if (!project.members.some((id) => id.toString() === req.user!.userId)) {
     return res.status(403).json({ message: 'Not a project member' });
   }
 
-  const tasks = await Task.find({ project: project._id })
-    .populate('assignedTo', 'name email avatarUrl')
-    .populate('createdBy', 'name email');
-
+  const tasks = await TaskService.getTasksByProject(projectId);
   res.json(tasks);
 };
 
@@ -65,55 +39,50 @@ export const updateTask = async (req: AuthRequest, res: Response) => {
   const taskId = Array.isArray(req.params.taskId)
     ? req.params.taskId[0]
     : req.params.taskId;
-  const { title, description, status, assignedTo } = req.body;
+  const project = await Project.findById((req.body.project || (await Task.findById(taskId))?.project));
+  
+  // Note: To properly handle project check without fetching task twice, 
+  // we might need to fetch task first in service or a specialized method.
+  // For now, I'll keep it simple.
+  
+  const task = await Task.findById(taskId);
+  if (!task) return res.status(404).json({ message: 'Task not found' });
 
-  if (!mongoose.Types.ObjectId.isValid(taskId)) {
-    return res.status(400).json({ message: 'Invalid taskId' });
+  const projectData = await Project.findById(task.project);
+  if (!projectData) return res.status(404).json({ message: 'Project not found' });
+
+  if (!projectData.members.some((id) => id.toString() === req.user!.userId)) {
+    return res.status(403).json({ message: 'Not a project member' });
   }
 
+  const updatedTask = await TaskService.updateTask(
+    taskId,
+    req.body,
+    req.user!.userId
+  );
+  res.json(updatedTask);
+};
+
+export const addTaskComment = async (req: AuthRequest, res: Response) => {
+  const taskId = Array.isArray(req.params.taskId)
+    ? req.params.taskId[0]
+    : req.params.taskId;
   const task = await Task.findById(taskId);
   if (!task) return res.status(404).json({ message: 'Task not found' });
 
   const project = await Project.findById(task.project);
   if (!project) return res.status(404).json({ message: 'Project not found' });
 
-  // Permission: user must be a member
   if (!project.members.some((id) => id.toString() === req.user!.userId)) {
     return res.status(403).json({ message: 'Not a project member' });
   }
 
-  // Update allowed fields
-  if (title !== undefined) {
-    if (typeof title !== 'string' || !title.trim()) {
-      return res.status(400).json({ message: 'Task title is required' });
-    }
-    task.title = title.trim();
-  }
-  if (description !== undefined) {
-    if (typeof description !== 'string') {
-      return res.status(400).json({ message: 'Description must be text' });
-    }
-    task.description = description.trim();
-  }
-  if (status && ['todo', 'in_progress', 'done'].includes(status))
-    task.status = status as TaskStatus;
-  if (assignedTo !== undefined) {
-    if (assignedTo === null || assignedTo === '') {
-      task.assignedTo = null;
-    } else if (
-      typeof assignedTo !== 'string' ||
-      !mongoose.Types.ObjectId.isValid(assignedTo)
-    ) {
-      return res.status(400).json({ message: 'Invalid assigned user' });
-    } else if (!project.members.some((id) => id.toString() === assignedTo)) {
-      return res.status(403).json({ message: 'User not in project' });
-    } else {
-      task.assignedTo = new mongoose.Types.ObjectId(assignedTo);
-    }
-  }
-
-  await task.save();
-  res.json(task);
+  const updatedTask = await TaskService.addComment(
+    taskId,
+    req.body.body,
+    req.user!.userId
+  );
+  res.status(201).json(updatedTask);
 };
 
 export const uploadTaskImages = async (req: AuthRequest, res: Response) => {
@@ -122,57 +91,23 @@ export const uploadTaskImages = async (req: AuthRequest, res: Response) => {
     : req.params.taskId;
   const files = req.files as Express.Multer.File[] | undefined;
 
-  if (!mongoose.Types.ObjectId.isValid(taskId)) {
-    return res.status(400).json({ message: 'Invalid task ID' });
-  }
   if (!files?.length) {
     return res
       .status(400)
       .json({ message: 'Please select at least one image' });
   }
 
-  const task = await Task.findById(taskId).select('+images.data');
-  if (!task) return res.status(404).json({ message: 'Task not found' });
-
-  const project = await Project.findById(task.project);
-  if (!project) return res.status(404).json({ message: 'Project not found' });
-  if (!project.members.some((id) => id.toString() === req.user!.userId)) {
-    return res.status(403).json({ message: 'Not a project member' });
-  }
-  if (task.images.length + files.length > 3) {
-    return res
-      .status(400)
-      .json({ message: 'A task can have up to three images' });
-  }
-
-  task.images.push(
-    ...files.map((file) => ({
-      filename: file.originalname,
-      contentType: file.mimetype,
-      data: file.buffer,
-      uploadedAt: new Date(),
-    }))
+  const task = await TaskService.uploadTaskImages(
+    taskId,
+    files,
+    req.user!.userId
   );
-  await task.save();
   res.status(201).json(task);
 };
 
 export const getTaskImage = async (req: AuthRequest, res: Response) => {
   const { taskId, imageId } = req.params;
-  if (
-    !mongoose.Types.ObjectId.isValid(taskId) ||
-    !mongoose.Types.ObjectId.isValid(imageId)
-  ) {
-    return res.status(400).end();
-  }
-
-  const task = await Task.findById(taskId).select('+images.data');
-  const image = task?.images.find(
-    (candidate) => candidate._id?.toString() === imageId
-  );
-  if (!image) return res.status(404).end();
-
-  res.set('Cache-Control', 'private, max-age=3600');
+  const image = await TaskService.getTaskImage(taskId, imageId);
   res.type(image.contentType).send(image.data);
 };
 
@@ -180,60 +115,19 @@ export const deleteTask = async (req: AuthRequest, res: Response) => {
   const taskId = Array.isArray(req.params.taskId)
     ? req.params.taskId[0]
     : req.params.taskId;
-
-  if (!mongoose.Types.ObjectId.isValid(taskId)) {
-    return res.status(400).json({ message: 'Invalid taskId' });
-  }
-
-  const task = await Task.findById(taskId);
-  if (!task) return res.status(404).json({ message: 'Task not found' });
-
-  const project = await Project.findById(task.project);
-  if (!project) return res.status(404).json({ message: 'Project not found' });
-
-  if (!project.members.some((id) => id.toString() === req.user!.userId)) {
-    return res.status(403).json({ message: 'Not a project member' });
-  }
-
-  await task.deleteOne();
-  res.json({ message: 'Task deleted' });
+  const result = await TaskService.deleteTask(taskId);
+  res.json(result);
 };
 
 export const assignUserToTask = async (req: AuthRequest, res: Response) => {
   const taskId = Array.isArray(req.params.taskId)
     ? req.params.taskId[0]
     : req.params.taskId;
-  const { userId } = req.body;
-
-  if (!mongoose.Types.ObjectId.isValid(taskId)) {
-    return res.status(400).json({ message: 'Invalid task ID' });
-  }
-
-  const task = await Task.findById(taskId).populate('project');
-  if (!task) return res.status(404).json({ message: 'Task not found' });
-
-  const project = await Project.findById(task.project);
-  if (!project) return res.status(404).json({ message: 'Project not found' });
-
-  // If userId is provided, check validity and membership
-  if (userId) {
-    if (!mongoose.Types.ObjectId.isValid(userId)) {
-      return res.status(400).json({ message: 'Invalid user ID' });
-    }
-    if (!project.members.some((id) => id.toString() === userId)) {
-      return res.status(403).json({ message: 'User not in project' });
-    }
-    task.assignedTo = userId;
-  } else {
-    // Unassign user
-    task.assignedTo = null;
-  }
-
-  await task.save();
-
-  res.json({
-    message: userId ? 'User assigned to task' : 'User unassigned from task',
-    taskId: task._id,
-    assignedTo: task.assignedTo,
-  });
+  const userId = req.body.userId;
+  const result = await TaskService.assignUserToTask(
+    taskId,
+    userId,
+    req.user!.userId
+  );
+  res.json(result);
 };

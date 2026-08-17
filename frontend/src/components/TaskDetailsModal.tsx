@@ -1,5 +1,5 @@
 import React, { FormEvent, useEffect, useState } from 'react';
-import { Task } from '../types/task';
+import { Task, TaskStatus } from '../types/task';
 import { User } from '../types';
 import { apiAssetSource } from '../utils/avatar';
 
@@ -10,9 +10,11 @@ interface Props {
   onSave: (
     title: string,
     description: string,
-    assignedTo: string
+    assignedTo: string,
+    status: TaskStatus
   ) => Promise<void>;
   onUpload: (files: File[]) => Promise<void>;
+  onComment: (body: string) => Promise<void>;
 }
 
 const TaskDetailsModal: React.FC<Props> = ({
@@ -21,6 +23,7 @@ const TaskDetailsModal: React.FC<Props> = ({
   onClose,
   onSave,
   onUpload,
+  onComment,
 }) => {
   const [title, setTitle] = useState(task.title);
   const [description, setDescription] = useState(task.description || '');
@@ -29,9 +32,12 @@ const TaskDetailsModal: React.FC<Props> = ({
       ? task.assignedTo?._id || ''
       : task.assignedTo || ''
   );
+  const [status, setStatus] = useState<TaskStatus>(task.status);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState('');
+  const [commentBody, setCommentBody] = useState('');
+  const [commenting, setCommenting] = useState(false);
 
   useEffect(() => {
     setTitle(task.title);
@@ -41,6 +47,7 @@ const TaskDetailsModal: React.FC<Props> = ({
         ? task.assignedTo?._id || ''
         : task.assignedTo || ''
     );
+    setStatus(task.status === 'done' ? 'code_review' : task.status);
   }, [task]);
 
   const save = async (event: FormEvent) => {
@@ -48,7 +55,7 @@ const TaskDetailsModal: React.FC<Props> = ({
     setMessage('');
     setSaving(true);
     try {
-      await onSave(title, description, assignedTo);
+      await onSave(title, description, assignedTo, status);
       setMessage('Task saved.');
     } catch (error: any) {
       setMessage(error.response?.data?.message || 'Unable to save the task.');
@@ -70,6 +77,30 @@ const TaskDetailsModal: React.FC<Props> = ({
       setUploading(false);
     }
   };
+
+  const addComment = async () => {
+    if (!commentBody.trim()) return;
+    setMessage('');
+    setCommenting(true);
+    try {
+      await onComment(commentBody.trim());
+      setCommentBody('');
+      setMessage('Comment added.');
+    } catch (error: any) {
+      setMessage(error.response?.data?.message || 'Unable to add comment.');
+    } finally {
+      setCommenting(false);
+    }
+  };
+
+  const displayName = (value: User | string) =>
+    typeof value === 'object' ? value.name : 'Unknown user';
+
+  const formatDate = (value: string) =>
+    new Date(value).toLocaleString([], {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    });
 
   const imageSlotsRemaining = 3 - (task.images?.length || 0);
 
@@ -130,6 +161,18 @@ const TaskDetailsModal: React.FC<Props> = ({
               ))}
             </select>
           </label>
+          <label>
+            Status
+            <select
+              value={status}
+              onChange={(event) => setStatus(event.target.value as TaskStatus)}
+            >
+              <option value="todo">To do</option>
+              <option value="in_progress">In progress</option>
+              <option value="code_review">Code review</option>
+              <option value="completed">Completed</option>
+            </select>
+          </label>
 
           <div className="task-images-section">
             <div className="task-images-heading">
@@ -173,6 +216,69 @@ const TaskDetailsModal: React.FC<Props> = ({
             )}
             <small>JPG, PNG, WebP, or GIF — up to 3 MB each.</small>
           </div>
+          <section className="task-history-section" aria-label="Comments and activity">
+            <div className="task-images-heading">
+              <strong>Comments</strong>
+              <span>{task.comments?.length || 0}</span>
+            </div>
+            <div className="task-comments-list">
+              {task.comments?.length ? (
+                task.comments.map((comment) => (
+                  <article className="task-comment" key={comment._id}>
+                    <div className="task-history-meta">
+                      <strong>{displayName(comment.author)}</strong>
+                      <time dateTime={comment.createdAt}>
+                        {formatDate(comment.createdAt)}
+                      </time>
+                    </div>
+                    <p>{comment.body}</p>
+                  </article>
+                ))
+              ) : (
+                <p className="task-history-empty">No comments yet.</p>
+              )}
+            </div>
+            <div className="task-comment-form">
+              <textarea
+                aria-label="Add a comment"
+                placeholder="Write a comment..."
+                maxLength={2000}
+                value={commentBody}
+                onChange={(event) => setCommentBody(event.target.value)}
+              />
+              <button
+                type="button"
+                className="task-save"
+                disabled={commenting || !commentBody.trim()}
+                onClick={() => void addComment()}
+              >
+                {commenting ? 'Adding...' : 'Add comment'}
+              </button>
+            </div>
+          </section>
+          <section className="task-history-section" aria-label="Activity history">
+            <div className="task-images-heading">
+              <strong>Activity history</strong>
+              <span>{task.activities?.length || 0}</span>
+            </div>
+            <div className="task-activity-list">
+              {task.activities?.length ? (
+                [...task.activities].reverse().map((activity) => (
+                  <div className="task-activity" key={activity._id}>
+                    <span className="task-activity-dot" aria-hidden="true" />
+                    <div>
+                      <p>{activity.message}</p>
+                      <small>
+                        {displayName(activity.actor)} · {formatDate(activity.createdAt)}
+                      </small>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="task-history-empty">No activity yet.</p>
+              )}
+            </div>
+          </section>
           {message && <p className="task-modal-message">{message}</p>}
           <div className="task-modal-actions">
             <button type="button" className="task-cancel" onClick={onClose}>

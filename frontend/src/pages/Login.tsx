@@ -14,7 +14,6 @@ const Login: React.FC = () => {
         password,
       });
 
-      console.log(res.data);
       localStorage.setItem('token', res.data.token);
       localStorage.setItem('role', res.data.user.role);
       window.location.href = '/';

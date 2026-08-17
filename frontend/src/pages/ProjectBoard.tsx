@@ -16,23 +16,43 @@ import {
   updateTaskStatus,
   updateTaskDetails,
   uploadTaskImages,
+  addTaskComment,
 } from '../api/tasks';
 import { getProjectById } from '../api/projects';
 import CreateTaskModal from '../components/CreateTaskModal';
 import TaskDetailsModal from '../components/TaskDetailsModal';
 import './ProjectBoard.css';
 
-const STATUSES: TaskStatus[] = ['todo', 'in_progress', 'done'];
+const STATUSES: TaskStatus[] = [
+  'todo',
+  'in_progress',
+  'code_review',
+  'completed',
+];
+
+const STATUS_LABELS: Record<TaskStatus, string> = {
+  todo: 'To do',
+  in_progress: 'In progress',
+  code_review: 'Code review',
+  completed: 'Completed',
+  done: 'Code review',
+};
+
+const normalizeTask = (task: Task): Task =>
+  task.status === 'done' ? { ...task, status: 'code_review' } : task;
 
 const ProjectBoard: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
 
+  const [ProjectName, setProjectName] = useState('');
   const [tasks, setTasks] = useState<Task[]>([]);
   const [members, setMembers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [showCompleted, setShowCompleted] = useState(false);
+  const [assigneeFilter, setAssigneeFilter] = useState('all');
 
   // Load tasks and project members
   useEffect(() => {
@@ -44,7 +64,8 @@ const ProjectBoard: React.FC = () => {
           getTasksByProject(projectId),
           getProjectById(projectId),
         ]);
-        setTasks(tasksData);
+        setProjectName(projectData.name);
+        setTasks(tasksData.map(normalizeTask));
         setMembers(projectData.members);
       } catch (err) {
         console.error(err);
@@ -58,11 +79,11 @@ const ProjectBoard: React.FC = () => {
     load();
   }, [projectId, navigate]);
 
-  const handleCreateTask = async (title: string, description?: string) => {
+  const handleCreateTask = async (title: string, description?: string, assignedTo?: string) => {
     if (!projectId) return;
 
     try {
-      await createTask(projectId, title, description);
+      await createTask(projectId, title, description, assignedTo);
       const updatedTasks = await getTasksByProject(projectId);
       setTasks(updatedTasks);
       setShowModal(false);
@@ -99,7 +120,7 @@ const ProjectBoard: React.FC = () => {
   const refreshTasks = async () => {
     if (!projectId) return;
     const updatedTasks = await getTasksByProject(projectId);
-    setTasks(updatedTasks);
+    setTasks(updatedTasks.map(normalizeTask));
     setSelectedTask((current) =>
       current
         ? updatedTasks.find((task) => task._id === current._id) || null
@@ -110,10 +131,17 @@ const ProjectBoard: React.FC = () => {
   const saveTaskDetails = async (
     title: string,
     description: string,
-    assignedTo: string
+    assignedTo: string,
+    status: TaskStatus
   ) => {
     if (!selectedTask) return;
-    await updateTaskDetails(selectedTask._id, title, description, assignedTo);
+    await updateTaskDetails(
+      selectedTask._id,
+      title,
+      description,
+      assignedTo,
+      status
+    );
     await refreshTasks();
   };
 
@@ -123,8 +151,11 @@ const ProjectBoard: React.FC = () => {
     await refreshTasks();
   };
 
-  const tasksByStatus = (status: TaskStatus) =>
-    tasks.filter((task) => task.status === status);
+  const addComment = async (body: string) => {
+    if (!selectedTask) return;
+    await addTaskComment(selectedTask._id, body);
+    await refreshTasks();
+  };
 
   const assignedUser = (task: Task) => {
     if (task.assignedTo && typeof task.assignedTo === 'object')
@@ -140,23 +171,64 @@ const ProjectBoard: React.FC = () => {
       .slice(0, 2)
       .toUpperCase();
 
+  const visibleStatuses = showCompleted
+    ? STATUSES
+    : STATUSES.filter((status) => status !== 'completed');
+
+  const filteredTasks = tasks.filter((task) => {
+    if (assigneeFilter === 'unassigned') return !assignedUser(task);
+    if (assigneeFilter === 'all') return true;
+    return assignedUser(task)?._id === assigneeFilter;
+  });
+
+  const tasksByStatus = (status: TaskStatus) =>
+    filteredTasks.filter((task) => task.status === status);
+
   if (loading) return <p style={{ padding: 24 }}>Loading board...</p>;
 
   return (
     <main className="board-page">
       <div className="board-toolbar">
         <div>
-          <p className="board-eyebrow">Project workspace</p>
+          <p className="board-eyebrow">{ProjectName}</p>
           <h1 className="board-title">Project Board</h1>
         </div>
-        <button className="add-task-button" onClick={() => setShowModal(true)}>
-          + Add task
-        </button>
+        <div className="board-actions">
+          <button className="add-task-button" onClick={() => setShowModal(true)}>
+            + Add task
+          </button>
+        </div>
+      </div>
+
+      <div className="board-filters" aria-label="Board filters">
+        <label className="board-filter">
+          <span>Assignee</span>
+          <select
+            value={assigneeFilter}
+            onChange={(event) => setAssigneeFilter(event.target.value)}
+          >
+            <option value="all">All assignees</option>
+            <option value="unassigned">Unassigned</option>
+            {members.map((member) => (
+              <option value={member._id} key={member._id}>
+                {member.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="completed-filter">
+          <input
+            type="checkbox"
+            checked={showCompleted}
+            onChange={(event) => setShowCompleted(event.target.checked)}
+          />
+          Show completed
+        </label>
       </div>
 
       <DragDropContext onDragEnd={onDragEnd}>
-        <div className="board">
-          {STATUSES.map((status) => {
+        <div className={`board board--${visibleStatuses.length}`}>
+          {visibleStatuses.map((status) => {
             const statusTasks = tasksByStatus(status);
             return (
               <Droppable droppableId={status} key={status}>
@@ -168,7 +240,7 @@ const ProjectBoard: React.FC = () => {
                   >
                     <div className="column-header">
                       <h3 className="column-title">
-                        {status.replace('_', ' ')}
+                        {STATUS_LABELS[status]}
                       </h3>
                       <span className="column-count">{statusTasks.length}</span>
                     </div>
@@ -243,8 +315,11 @@ const ProjectBoard: React.FC = () => {
 
       {showModal && (
         <CreateTaskModal
+          members={members}
           onClose={() => setShowModal(false)}
-          onCreate={handleCreateTask}
+          onCreate={async (title, description, assignedTo) => {
+            await handleCreateTask(title, description, assignedTo);
+          }}
         />
       )}
       {selectedTask && (
@@ -254,6 +329,7 @@ const ProjectBoard: React.FC = () => {
           onClose={() => setSelectedTask(null)}
           onSave={saveTaskDetails}
           onUpload={addTaskImages}
+          onComment={addComment}
         />
       )}
     </main>
