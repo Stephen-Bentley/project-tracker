@@ -1,11 +1,7 @@
 import { User } from './index';
 
 export type TaskStatus =
-  | 'todo'
-  | 'in_progress'
-  | 'code_review'
-  | 'completed'
-  | 'done';
+  'todo' | 'in_progress' | 'code_review' | 'completed' | 'done';
 
 export interface TaskImage {
   _id: string;

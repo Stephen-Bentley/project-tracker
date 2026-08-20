@@ -56,7 +56,9 @@ test('shows comments, activity history, and status choices', () => {
     />
   );
 
-  expect(screen.getByText('Please include the migration note.')).toBeInTheDocument();
+  expect(
+    screen.getByText('Please include the migration note.')
+  ).toBeInTheDocument();
   expect(
     screen.getByText('Status changed from In progress to Code review')
   ).toBeInTheDocument();
@@ -86,5 +88,7 @@ test('submits a new comment through the modal callback', async () => {
   await waitFor(() =>
     expect(onComment).toHaveBeenCalledWith('Looks good to me.')
   );
-  await waitFor(() => expect(screen.getByText('Comment added.')).toBeInTheDocument());
+  await waitFor(() =>
+    expect(screen.getByText('Comment added.')).toBeInTheDocument()
+  );
 });
