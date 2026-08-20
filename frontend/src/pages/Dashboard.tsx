@@ -1,4 +1,5 @@
 import React from 'react';
+import { logoutSession } from '../api/session';
 import { useNavigate } from 'react-router-dom';
 import './Dashboard.css';
 
@@ -6,9 +7,8 @@ const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const role = localStorage.getItem('role'); // 'admin' or 'user'
 
-  const logout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('role');
+  const logout = async () => {
+    await logoutSession();
     window.location.replace('/login');
   };
 

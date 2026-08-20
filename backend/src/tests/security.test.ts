@@ -43,9 +43,21 @@ describe('Security Integration Tests', () => {
     otherUserId = otherUser._id.toString();
 
     // Generate tokens
-    adminToken = jwt.sign({ userId: adminId, role: 'admin' }, process.env.JWT_SECRET!, { expiresIn: '1d' });
-    userToken = jwt.sign({ userId: userId, role: 'user' }, process.env.JWT_SECRET!, { expiresIn: '1d' });
-    otherUserToken = jwt.sign({ userId: otherUserId, role: 'user' }, process.env.JWT_SECRET!, { expiresIn: '1d' });
+    adminToken = jwt.sign(
+      { userId: adminId, role: 'admin' },
+      process.env.JWT_SECRET!,
+      { expiresIn: '1d' }
+    );
+    userToken = jwt.sign(
+      { userId: userId, role: 'user' },
+      process.env.JWT_SECRET!,
+      { expiresIn: '1d' }
+    );
+    otherUserToken = jwt.sign(
+      { userId: otherUserId, role: 'user' },
+      process.env.JWT_SECRET!,
+      { expiresIn: '1d' }
+    );
 
     // Setup project
     const project = await Project.create({
@@ -86,6 +98,18 @@ describe('Security Integration Tests', () => {
         .send({
           title: 'Unauthorized Task',
           projectId: projectId,
+        });
+      expect(res.status).toBe(403);
+    });
+
+    it('should prevent assigning a non-member during task creation', async () => {
+      const res = await request(app)
+        .post('/api/tasks')
+        .set('Authorization', `Bearer ${userToken}`)
+        .send({
+          title: 'Unauthorized Assignment',
+          projectId,
+          assignedTo: otherUserId,
         });
       expect(res.status).toBe(403);
     });
@@ -140,6 +164,14 @@ describe('Security Integration Tests', () => {
         .send({ userId: userId });
       expect(res.status).toBe(403);
     });
+
+    it('should prevent assigning a non-member through task updates', async () => {
+      const res = await request(app)
+        .put(`/api/tasks/${taskId}`)
+        .set('Authorization', `Bearer ${userToken}`)
+        .send({ assignedTo: otherUserId });
+      expect(res.status).toBe(403);
+    });
   });
 
   describe('IDOR: Image Access', () => {
@@ -149,14 +181,14 @@ describe('Security Integration Tests', () => {
         .post(`/api/tasks/${taskId}/images`)
         .set('Authorization', `Bearer ${userToken}`)
         .attach('images', Buffer.from('fake-image-content'), 'test.png');
-      
+
       expect(resUpload.status).toBe(201);
       const imageId = resUpload.body.images[0]._id;
 
       const resGet = await request(app)
         .get(`/api/tasks/${taskId}/images/${imageId}`)
         .set('Authorization', `Bearer ${userToken}`);
-      
+
       expect(resGet.status).toBe(200);
     });
 
@@ -168,10 +200,67 @@ describe('Security Integration Tests', () => {
         .attach('images', Buffer.from('fake-image-content'), 'test.png');
       const imageId = resUpload.body.images[0]._id;
 
-      const resGet = await request(app)
-        .get(`/api/tasks/${taskId}/images/${imageId}`);
-      
+      const resGet = await request(app).get(
+        `/api/tasks/${taskId}/images/${imageId}`
+      );
+
       expect(resGet.status).toBe(401);
+    });
+
+    it('should deny image access to a non-project member', async () => {
+      const resUpload = await request(app)
+        .post(`/api/tasks/${taskId}/images`)
+        .set('Authorization', `Bearer ${userToken}`)
+        .attach('images', Buffer.from('fake-image-content'), 'test.png');
+      const imageId = resUpload.body.images[0]._id;
+
+      const resGet = await request(app)
+        .get(`/api/tasks/${taskId}/images/${imageId}`)
+        .set('Authorization', `Bearer ${otherUserToken}`);
+
+      expect(resGet.status).toBe(403);
+    });
+
+    it('should deny image upload to a non-project member', async () => {
+      const resUpload = await request(app)
+        .post(`/api/tasks/${taskId}/images`)
+        .set('Authorization', `Bearer ${otherUserToken}`)
+        .attach('images', Buffer.from('fake-image-content'), 'test.png');
+
+      expect(resUpload.status).toBe(403);
+    });
+  });
+
+  describe('JWT lifecycle', () => {
+    it('should rotate refresh tokens and revoke them on logout', async () => {
+      const login = await request(app).post('/api/auth/login').send({
+        email: 'user@test.com',
+        password: 'password123',
+      });
+      expect(login.status).toBe(200);
+      const firstCookie = login.headers['set-cookie'][0];
+
+      const refresh = await request(app)
+        .post('/api/auth/refresh')
+        .set('Cookie', firstCookie);
+      expect(refresh.status).toBe(200);
+      const rotatedCookie = refresh.headers['set-cookie'][0];
+      expect(rotatedCookie).not.toBe(firstCookie);
+
+      const oldTokenRefresh = await request(app)
+        .post('/api/auth/refresh')
+        .set('Cookie', firstCookie);
+      expect(oldTokenRefresh.status).toBe(401);
+
+      const logout = await request(app)
+        .post('/api/auth/logout')
+        .set('Cookie', rotatedCookie);
+      expect(logout.status).toBe(204);
+
+      const revokedRefresh = await request(app)
+        .post('/api/auth/refresh')
+        .set('Cookie', rotatedCookie);
+      expect(revokedRefresh.status).toBe(401);
     });
   });
 });

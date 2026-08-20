@@ -3,7 +3,11 @@ import User from '../models/User';
 import mongoose from 'mongoose';
 
 export class ProjectService {
-  static async createProject(name: string, description: string, userId: string) {
+  static async createProject(
+    name: string,
+    description: string,
+    userId: string
+  ) {
     const project = await Project.create({
       name,
       description,
@@ -50,7 +54,11 @@ export class ProjectService {
     };
   }
 
-  static async removeMember(projectId: string, userId: string, currentUserId: string) {
+  static async removeMember(
+    projectId: string,
+    userId: string,
+    currentUserId: string
+  ) {
     const project = await Project.findById(projectId);
     if (!project) {
       const error = new Error('Project not found');
@@ -105,7 +113,11 @@ export class ProjectService {
     return project;
   }
 
-  static async updateMembers(projectId: string, members: string[], currentUserId: string) {
+  static async updateMembers(
+    projectId: string,
+    members: string[],
+    currentUserId: string
+  ) {
     const project = await Project.findById(projectId);
     if (!project) {
       const error = new Error('Project not found');
@@ -129,7 +141,10 @@ export class ProjectService {
     }
 
     const updatedMembers = Array.from(
-      new Set([...members.map(m => new mongoose.Types.ObjectId(m)), project.createdBy])
+      new Set([
+        ...members.map((m) => new mongoose.Types.ObjectId(m)),
+        project.createdBy,
+      ])
     );
 
     project.members = updatedMembers;

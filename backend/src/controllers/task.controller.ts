@@ -1,10 +1,13 @@
-import { Response, Request } from 'express';
+import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth.middleware';
 import Task, { TaskStatus } from '../models/Task';
 import Project from '../models/Project';
 import { TaskService } from '../services/task.service';
 import { validate } from '../middleware/validate.middleware';
-import { createTaskSchema, updateTaskSchema } from '../validators/task.validator';
+import {
+  createTaskSchema,
+  updateTaskSchema,
+} from '../validators/task.validator';
 
 export const createTask = async (req: AuthRequest, res: Response) => {
   const { title, description, projectId, assignedTo, status } = req.body;
@@ -39,16 +42,19 @@ export const updateTask = async (req: AuthRequest, res: Response) => {
   const taskId = Array.isArray(req.params.taskId)
     ? req.params.taskId[0]
     : req.params.taskId;
-  const project = await Project.findById((req.body.project || (await Task.findById(taskId))?.project));
-  
+  const project = await Project.findById(
+    req.body.project || (await Task.findById(taskId))?.project
+  );
+
   // Note: To properly handle project check without fetching task twice, we might need to fetch task first in service or a specialized method.
   // For now, I'll keep it simple.
-  
+
   const task = await Task.findById(taskId);
   if (!task) return res.status(404).json({ message: 'Task not found' });
 
   const projectData = await Project.findById(task.project);
-  if (!projectData) return res.status(404).json({ message: 'Project not found' });
+  if (!projectData)
+    return res.status(404).json({ message: 'Project not found' });
 
   if (!projectData.members.some((id) => id.toString() === req.user!.userId)) {
     return res.status(403).json({ message: 'Not a project member' });
@@ -104,11 +110,11 @@ export const uploadTaskImages = async (req: AuthRequest, res: Response) => {
   res.status(201).json(task);
 };
 
-export const getTaskImage = async (req: Request, res: Response) => {
+export const getTaskImage = async (req: AuthRequest, res: Response) => {
   const { taskId, imageId } = req.params;
   const tId = Array.isArray(taskId) ? taskId[0] : taskId;
   const iId = Array.isArray(imageId) ? imageId[0] : imageId;
-  const image = await TaskService.getTaskImage(tId, iId);
+  const image = await TaskService.getTaskImage(tId, iId, req.user!.userId);
   res.type(image.contentType).send(image.data);
 };
 

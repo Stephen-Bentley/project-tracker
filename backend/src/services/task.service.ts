@@ -24,6 +24,15 @@ export class TaskService {
       throw error;
     }
 
+    if (
+      assignedTo &&
+      !project.members.some((id) => id.toString() === assignedTo)
+    ) {
+      const error = new Error('Target user is not a member of this project');
+      (error as any).status = 403;
+      throw error;
+    }
+
     const task = await Task.create({
       title,
       description,
@@ -93,7 +102,8 @@ export class TaskService {
 
     // Apply updates
     if (updates.title !== undefined) task.title = updates.title;
-    if (updates.description !== undefined) task.description = updates.description;
+    if (updates.description !== undefined)
+      task.description = updates.description;
     if (
       updates.status &&
       ['todo', 'in_progress', 'code_review', 'completed', 'done'].includes(
@@ -110,10 +120,7 @@ export class TaskService {
       }
       task.status = updates.status;
     }
-    if (
-      updates.title !== undefined ||
-      updates.description !== undefined
-    ) {
+    if (updates.title !== undefined || updates.description !== undefined) {
       activities.push({
         type: 'details_updated',
         message: 'Task details updated',
@@ -127,6 +134,15 @@ export class TaskService {
       if (updates.assignedTo === null || updates.assignedTo === '') {
         task.assignedTo = null;
       } else {
+        if (
+          !project.members.some((id) => id.toString() === updates.assignedTo)
+        ) {
+          const error = new Error(
+            'Target user is not a member of this project'
+          );
+          (error as any).status = 403;
+          throw error;
+        }
         task.assignedTo = new mongoose.Types.ObjectId(updates.assignedTo);
       }
       if (previousAssignee !== nextAssignee) {
@@ -146,11 +162,22 @@ export class TaskService {
     return task;
   }
 
-  static async uploadTaskImages(taskId: string, images: any[], actorId: string) {
+  static async uploadTaskImages(
+    taskId: string,
+    images: any[],
+    actorId: string
+  ) {
     const task = await Task.findById(taskId).select('+images.data');
     if (!task) {
       const error = new Error('Task not found');
       (error as any).status = 404;
+      throw error;
+    }
+
+    const project = await Project.findById(task.project);
+    if (!project || !project.members.some((id) => id.toString() === actorId)) {
+      const error = new Error('Not a project member');
+      (error as any).status = 403;
       throw error;
     }
 
@@ -181,11 +208,18 @@ export class TaskService {
     return task;
   }
 
-  static async getTaskImage(taskId: string, imageId: string) {
+  static async getTaskImage(taskId: string, imageId: string, actorId: string) {
     const task = await Task.findById(taskId).select('+images.data');
     if (!task) {
       const error = new Error('Task not found');
       (error as any).status = 404;
+      throw error;
+    }
+
+    const project = await Project.findById(task.project);
+    if (!project || !project.members.some((id) => id.toString() === actorId)) {
+      const error = new Error('Not a project member');
+      (error as any).status = 403;
       throw error;
     }
 

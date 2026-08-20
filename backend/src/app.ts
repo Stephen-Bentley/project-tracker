@@ -7,11 +7,12 @@ import userRoutes from './routes/user.routes';
 import projectRoutes from './routes/project.routes';
 import taskRoutes from './routes/task.routes';
 import { globalErrorHandler } from './middleware/error.middleware';
+import { env } from './config/env';
 
 const app = express();
 
 app.use(helmet());
-app.use(cors());
+app.use(cors({ origin: env.CORS_ORIGINS, credentials: true }));
 app.use(express.json());
 
 const apiLimiter = rateLimit({
@@ -21,7 +22,16 @@ const apiLimiter = rateLimit({
   legacyHeaders: false, // Do not return `X-RateLimit-*` headers
 });
 
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'Too many login attempts. Please try again later.' },
+});
+
 app.use('/api/', apiLimiter);
+app.use('/api/auth/login', authLimiter);
 
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);

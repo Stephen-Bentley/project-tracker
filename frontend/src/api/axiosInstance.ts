@@ -1,7 +1,9 @@
 import axios from 'axios';
+import { clearSession, refreshAccessToken } from './session';
 
 const axiosInstance = axios.create({
   baseURL: process.env.REACT_APP_API_URL || 'http://localhost:5000/api',
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -16,7 +18,7 @@ axiosInstance.interceptors.request.use(
     }
     return config;
   },
-  (error) => {
+  async (error) => {
     return Promise.reject(error);
   }
 );
@@ -25,10 +27,25 @@ axiosInstance.interceptors.request.use(
 axiosInstance.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response && error.response.status === 401) {
-      // Handle unauthorized (e.g., redirect to login)
-      localStorage.removeItem('token');
-      window.location.href = '/login';
+    const originalRequest = error.config as typeof error.config & {
+      _retry?: boolean;
+    };
+
+    if (
+      error.response?.status === 401 &&
+      originalRequest &&
+      !originalRequest._retry &&
+      !String(originalRequest.url).includes('/auth/refresh')
+    ) {
+      originalRequest._retry = true;
+      try {
+        const token = await refreshAccessToken();
+        originalRequest.headers.Authorization = `Bearer ${token}`;
+        return axiosInstance(originalRequest);
+      } catch {
+        clearSession();
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }

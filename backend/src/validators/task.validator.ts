@@ -7,9 +7,13 @@ export const createTaskSchema = z.object({
     projectId: z.string().refine((val) => /^[0-9a-fA-F]{24}$/.test(val), {
       message: 'Invalid projectId',
     }),
-    assignedTo: z.string().refine((val) => /^[0-9a-fA-F]{24}$/.test(val), {
-      message: 'Invalid userId',
-    }).optional().nullable(),
+    assignedTo: z
+      .string()
+      .refine((val) => /^[0-9a-fA-F]{24}$/.test(val), {
+        message: 'Invalid userId',
+      })
+      .optional()
+      .nullable(),
     status: z
       .enum(['todo', 'in_progress', 'code_review', 'completed', 'done'])
       .optional(),
@@ -22,16 +26,22 @@ export const updateTaskSchema = z.object({
       message: 'Invalid taskId',
     }),
   }),
-  body: z.object({
-    title: z.string().optional(),
-    description: z.string().optional(),
-    status: z
-      .enum(['todo', 'in_progress', 'code_review', 'completed', 'done'])
-      .optional(),
-    assignedTo: z.string().refine((val) => /^[0-9a-fA-F]{24}$/.test(val), {
-      message: 'Invalid userId',
-    }).optional().nullable(),
-  }).optional(),
+  body: z
+    .object({
+      title: z.string().optional(),
+      description: z.string().optional(),
+      status: z
+        .enum(['todo', 'in_progress', 'code_review', 'completed', 'done'])
+        .optional(),
+      assignedTo: z
+        .string()
+        .refine((val) => /^[0-9a-fA-F]{24}$/.test(val), {
+          message: 'Invalid userId',
+        })
+        .optional()
+        .nullable(),
+    })
+    .optional(),
 });
 
 export const createTaskCommentSchema = z.object({

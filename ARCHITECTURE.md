@@ -26,7 +26,7 @@ flowchart LR
 - **React frontend:** Provides routing, navigation, forms, board interactions, filters, and image display.
 - **Express API:** Authenticates requests, validates input, applies project and task rules, and returns JSON or image responses.
 - **MongoDB:** Stores users, projects, tasks, membership references, and image binary data.
-- **JWT:** Carries the user ID and role for seven days after login.
+- **JWT:** Carries the user ID and role for 15 minutes after login. A rotated refresh token in an HttpOnly cookie renews access and can be revoked on logout or password change.
 
 The API starts on `PORT` with a default of `5000`. The frontend calls `REACT_APP_API_URL` when set, otherwise it uses `http://localhost:5000/api`.
 
@@ -70,7 +70,7 @@ Dependencies cross from the frontend to the HTTP API. The backend depends on Mon
 
 1. The user submits an email and password to `POST /api/auth/login`.
 2. The validation middleware checks the request body.
-3. `AuthService` loads the user with the password field, compares the password with bcrypt, and signs a seven-day JWT containing the user ID and role.
+3. `AuthService` loads the user with the password field, compares the password with bcrypt, and issues a short-lived JWT plus a rotated refresh token stored only as a hash.
 4. The frontend stores the token and role in local storage, then reloads the root route.
 5. Axios reads the token before each request and adds the bearer header.
 6. Logout removes the token and role and performs a full redirect to `/login`, so the route guard cannot keep rendering a stale authenticated page.
@@ -149,19 +149,19 @@ The current status compatibility rule is that `done` is accepted in the backend 
 - The API returns `401` for missing or invalid authentication, `403` for authorization failures, and service-defined `400`, `404`, or `409` errors for validation and domain failures.
 - The board uses optimistic status updates. If the API update fails, it alerts the user but does not currently restore the previous task status automatically.
 - Frontend API calls generally show page alerts or inline messages on failure. There is no shared retry or offline queue.
-- CORS is enabled globally with the default configuration.
+- CORS uses the comma-separated `CORS_ORIGINS` allow-list and defaults to the local frontend origin.
 - Image storage is memory-buffered during upload and persisted inside MongoDB. This increases document and database size as images accumulate.
-- Environment configuration requires `MONGO_URI` and `JWT_SECRET`; `PORT` is optional.
+- Environment configuration requires `MONGO_URI` and `JWT_SECRET`; `PORT` and `CORS_ORIGINS` are optional.
 - The repository has separate frontend and backend development commands and a root command that runs both with `concurrently`.
 
 ## 9. Verification
 
 - The frontend production build has been run successfully with the bundled Node runtime.
 - The frontend test setup uses Jest and React Testing Library, but the checked-in `App.test.tsx` is still the default starter assertion and does not prove the application's current flows.
-- The backend has no checked-in automated test suite.
-- A backend TypeScript check is currently not clean. It reports existing type errors in controllers, middleware, services, and the Zod type import. The status additions are implemented in the backend source, but a clean backend build remains unverified.
+- The backend has checked-in Jest security and smoke tests, plus a TypeScript compilation check.
+- Backend security tests cover task membership authorization, assignment membership, and authenticated image access.
 - No automated browser or end-to-end checks are currently documented.
-- Database indexes, production deployment behavior, CORS policy, JWT secret rotation, and public image access have not been verified in an environment outside local source inspection.
+- Database indexes, production deployment behavior, CORS policy, JWT secret rotation, and public avatar access have not been verified in an environment outside local source inspection.
 
 ## 10. Known limitations
 

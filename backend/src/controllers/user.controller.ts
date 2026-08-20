@@ -15,23 +15,36 @@ export const getCurrentUser = async (req: AuthRequest, res: Response) => {
 
 export const updateCurrentUser = async (req: AuthRequest, res: Response) => {
   const { name, avatarUrl } = req.body;
-  const user = await UserService.updateCurrentUser(req.user!.userId, name, avatarUrl);
+  const user = await UserService.updateCurrentUser(
+    req.user!.userId,
+    name,
+    avatarUrl
+  );
   res.json(user);
 };
 
-export const uploadCurrentUserAvatar = async (req: AuthRequest, res: Response) => {
+export const uploadCurrentUserAvatar = async (
+  req: AuthRequest,
+  res: Response
+) => {
   if (!req.file) {
     return res
       .status(400)
       .json({ message: 'Please select an image to upload' });
   }
 
-  const result = await UserService.uploadAvatar(req.user!.userId, req.file.buffer, req.file.mimetype);
+  const result = await UserService.uploadAvatar(
+    req.user!.userId,
+    req.file.buffer,
+    req.file.mimetype
+  );
   res.json(result);
 };
 
 export const getUserAvatar = async (req: Request, res: Response) => {
-  const userId = Array.isArray(req.params.userId) ? req.params.userId[0] : req.params.userId;
+  const userId = Array.isArray(req.params.userId)
+    ? req.params.userId[0]
+    : req.params.userId;
   const result = await UserService.getUserAvatar(userId);
   if (!result) return res.status(404).end();
 
@@ -39,8 +52,15 @@ export const getUserAvatar = async (req: Request, res: Response) => {
   res.type(result.contentType).send(result.data);
 };
 
-export const changeCurrentUserPassword = async (req: AuthRequest, res: Response) => {
-  const result = await UserService.changePassword(req.user!.userId, req.body.currentPassword, req.body.newPassword);
+export const changeCurrentUserPassword = async (
+  req: AuthRequest,
+  res: Response
+) => {
+  const result = await UserService.changePassword(
+    req.user!.userId,
+    req.body.currentPassword,
+    req.body.newPassword
+  );
   res.json(result);
 };
 
