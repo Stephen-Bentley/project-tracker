@@ -129,7 +129,7 @@ export class ProjectService {
     }
 
     const updatedMembers = Array.from(
-      new Set([...members, project.createdBy.toString()])
+      new Set([...members.map(m => new mongoose.Types.ObjectId(m)), project.createdBy])
     );
 
     project.members = updatedMembers;

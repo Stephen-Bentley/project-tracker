@@ -1,7 +1,8 @@
 import React, { FormEvent, useEffect, useState } from 'react';
-import { Task, TaskStatus } from '../types/task';
+import Task, { TaskStatus } from '../types/task';
 import { User } from '../types';
 import { apiAssetSource } from '../utils/avatar';
+import SecureImage from './SecureImage';
 
 interface Props {
   task: Task;
@@ -182,19 +183,18 @@ const TaskDetailsModal: React.FC<Props> = ({
             {task.images?.length > 0 && (
               <div className="task-image-grid">
                 {task.images.map((image) => {
-                  const source = apiAssetSource(
-                    `/api/tasks/${task._id}/images/${image._id}`
-                  );
+                  const source = `/api/tasks/${task._id}/images/${image._id}`;
                   return (
                     <a
                       key={image._id}
-                      href={source}
+                      href={apiAssetSource(source)}
                       target="_blank"
                       rel="noreferrer"
                       title={image.filename}
                     >
-                      <img src={source} alt={image.filename} />
+                      <SecureImage src={source} alt={image.filename} />
                     </a>
+                  );
                   );
                 })}
               </div>

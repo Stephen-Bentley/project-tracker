@@ -1,4 +1,4 @@
-import { Response } from 'express';
+import { Response, Request } from 'express';
 import { AuthRequest } from '../middleware/auth.middleware';
 import Task, { TaskStatus } from '../models/Task';
 import Project from '../models/Project';
@@ -41,8 +41,7 @@ export const updateTask = async (req: AuthRequest, res: Response) => {
     : req.params.taskId;
   const project = await Project.findById((req.body.project || (await Task.findById(taskId))?.project));
   
-  // Note: To properly handle project check without fetching task twice, 
-  // we might need to fetch task first in service or a specialized method.
+  // Note: To properly handle project check without fetching task twice, we might need to fetch task first in service or a specialized method.
   // For now, I'll keep it simple.
   
   const task = await Task.findById(taskId);
@@ -105,9 +104,11 @@ export const uploadTaskImages = async (req: AuthRequest, res: Response) => {
   res.status(201).json(task);
 };
 
-export const getTaskImage = async (req: AuthRequest, res: Response) => {
+export const getTaskImage = async (req: Request, res: Response) => {
   const { taskId, imageId } = req.params;
-  const image = await TaskService.getTaskImage(taskId, imageId);
+  const tId = Array.isArray(taskId) ? taskId[0] : taskId;
+  const iId = Array.isArray(imageId) ? imageId[0] : imageId;
+  const image = await TaskService.getTaskImage(tId, iId);
   res.type(image.contentType).send(image.data);
 };
 
@@ -115,7 +116,7 @@ export const deleteTask = async (req: AuthRequest, res: Response) => {
   const taskId = Array.isArray(req.params.taskId)
     ? req.params.taskId[0]
     : req.params.taskId;
-  const result = await TaskService.deleteTask(taskId);
+  const result = await TaskService.deleteTask(taskId, req.user!.userId);
   res.json(result);
 };
 

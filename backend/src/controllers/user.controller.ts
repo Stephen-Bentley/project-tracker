@@ -1,4 +1,4 @@
-import { Response } from 'express';
+import { Response, Request } from 'express';
 import { AuthRequest } from '../middleware/auth.middleware';
 import { UserService } from '../services/user.service';
 import {
@@ -31,7 +31,8 @@ export const uploadCurrentUserAvatar = async (req: AuthRequest, res: Response) =
 };
 
 export const getUserAvatar = async (req: Request, res: Response) => {
-  const result = await UserService.getUserAvatar(req.params.userId);
+  const userId = Array.isArray(req.params.userId) ? req.params.userId[0] : req.params.userId;
+  const result = await UserService.getUserAvatar(userId);
   if (!result) return res.status(404).end();
 
   res.set('Cache-Control', 'no-store');

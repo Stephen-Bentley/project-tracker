@@ -5,7 +5,7 @@ import mongoose from 'mongoose';
 export class TaskService {
   static async createTask(
     title: string,
-    description?: string,
+    description: string | undefined,
     projectId: string,
     assignedTo: string | null,
     status: TaskStatus,
@@ -15,6 +15,12 @@ export class TaskService {
     if (!project) {
       const error = new Error('Project not found');
       (error as any).status = 404;
+      throw error;
+    }
+
+    if (!project.members.some((id) => id.toString() === creatorId)) {
+      const error = new Error('You are not a member of this project');
+      (error as any).status = 403;
       throw error;
     }
 
@@ -195,11 +201,18 @@ export class TaskService {
     return image;
   }
 
-  static async deleteTask(taskId: string) {
+  static async deleteTask(taskId: string, actorId: string) {
     const task = await Task.findById(taskId);
     if (!task) {
       const error = new Error('Task not found');
       (error as any).status = 404;
+      throw error;
+    }
+
+    const project = await Project.findById(task.project);
+    if (!project || !project.members.some((id) => id.toString() === actorId)) {
+      const error = new Error('Not authorized to delete this task');
+      (error as any).status = 403;
       throw error;
     }
 
@@ -219,8 +232,20 @@ export class TaskService {
       throw error;
     }
 
+    const project = await Project.findById(task.project);
+    if (!project || !project.members.some((id) => id.toString() === actorId)) {
+      const error = new Error('Not authorized to assign users to this task');
+      (error as any).status = 403;
+      throw error;
+    }
+
     const previousAssignee = task.assignedTo?.toString() || null;
     if (userId) {
+      if (!project.members.some((id) => id.toString() === userId)) {
+        const error = new Error('Target user is not a member of this project');
+        (error as any).status = 403;
+        throw error;
+      }
       task.assignedTo = new mongoose.Types.ObjectId(userId);
     } else {
       task.assignedTo = null;

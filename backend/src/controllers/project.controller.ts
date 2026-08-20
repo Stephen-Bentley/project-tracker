@@ -21,27 +21,27 @@ export const getMyProjects = async (req: AuthRequest, res: Response) => {
 };
 
 export const addUserToProject = async (req: AuthRequest, res: Response) => {
-  const projectId = req.params.projectId;
+  const projectId = Array.isArray(req.params.projectId) ? req.params.projectId[0] : req.params.projectId;
   const userId = req.body.userId;
   const result = await ProjectService.addMember(projectId, userId);
   res.json(result);
 };
 
 export const removeUserFromProject = async (req: AuthRequest, res: Response) => {
-  const projectId = req.params.projectId;
-  const userId = req.params.userId;
+  const projectId = Array.isArray(req.params.projectId) ? req.params.projectId[0] : req.params.projectId;
+  const userId = Array.isArray(req.params.userId) ? req.params.userId[0] : req.params.userId;
   const result = await ProjectService.removeMember(projectId, userId, req.user!.userId);
   res.json(result);
 };
 
 export const getProjectById = async (req: AuthRequest, res: Response) => {
-  const projectId = req.params.projectId;
+  const projectId = Array.isArray(req.params.projectId) ? req.params.projectId[0] : req.params.projectId;
   const project = await ProjectService.getProjectById(projectId, req.user!.userId);
   res.json(project);
 };
 
 export const updateProjectMembers = async (req: AuthRequest, res: Response) => {
-  const projectId = req.params.projectId;
+  const projectId = Array.isArray(req.params.projectId) ? req.params.projectId[0] : req.params.projectId;
   const { members } = req.body;
   const project = await ProjectService.updateMembers(projectId, members, req.user!.userId);
   res.json(project);
