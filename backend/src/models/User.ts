@@ -9,6 +9,8 @@ export interface IUser extends Document {
   avatarUrl?: string;
   avatarImage?: Buffer;
   avatarContentType?: string;
+  refreshTokenHash?: string;
+  refreshTokenExpiresAt?: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
 }
 
@@ -48,6 +50,14 @@ const UserSchema = new Schema<IUser>(
     },
     avatarContentType: {
       type: String,
+      select: false,
+    },
+    refreshTokenHash: {
+      type: String,
+      select: false,
+    },
+    refreshTokenExpiresAt: {
+      type: Date,
       select: false,
     },
   },

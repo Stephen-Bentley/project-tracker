@@ -23,7 +23,7 @@ const router = Router();
 router.post('/', authenticate, validate(createTaskSchema), createTask);
 router.get('/project/:projectId', authenticate, getTasksByProject);
 // The browser loads image elements without the API authorization header.
-router.get('/:taskId/images/:imageId', getTaskImage);
+router.get('/:taskId/images/:imageId', authenticate, getTaskImage);
 router.post(
   '/:taskId/images',
   authenticate,

@@ -79,7 +79,11 @@ const ProjectBoard: React.FC = () => {
     load();
   }, [projectId, navigate]);
 
-  const handleCreateTask = async (title: string, description?: string, assignedTo?: string) => {
+  const handleCreateTask = async (
+    title: string,
+    description?: string,
+    assignedTo?: string
+  ) => {
     if (!projectId) return;
 
     try {
@@ -194,7 +198,10 @@ const ProjectBoard: React.FC = () => {
           <h1 className="board-title">Project Board</h1>
         </div>
         <div className="board-actions">
-          <button className="add-task-button" onClick={() => setShowModal(true)}>
+          <button
+            className="add-task-button"
+            onClick={() => setShowModal(true)}
+          >
             + Add task
           </button>
         </div>
@@ -239,9 +246,7 @@ const ProjectBoard: React.FC = () => {
                     className={`board-column board-column--${status}`}
                   >
                     <div className="column-header">
-                      <h3 className="column-title">
-                        {STATUS_LABELS[status]}
-                      </h3>
+                      <h3 className="column-title">{STATUS_LABELS[status]}</h3>
                       <span className="column-count">{statusTasks.length}</span>
                     </div>
 

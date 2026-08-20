@@ -6,10 +6,12 @@
     "dev": "concurrently --names backend,frontend --prefix-colors blue,green \"npm run dev --prefix backend\" \"npm start --prefix frontend\"",
     "build": "npm run build --prefix backend && npm run build --prefix frontend",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "prepare": "husky"
   },
   "devDependencies": {
     "concurrently": "^9.2.1",
+    "husky": "^9.1.7",
     "prettier": "^3.6.2"
   }
 }
