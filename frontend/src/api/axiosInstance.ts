@@ -18,7 +18,7 @@ axiosInstance.interceptors.request.use(
     }
     return config;
   },
-  async (error) => {
+  (error) => {
     return Promise.reject(error);
   }
 );
@@ -26,7 +26,7 @@ axiosInstance.interceptors.request.use(
 // Response interceptor to handle 401s
 axiosInstance.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
     const originalRequest = error.config as typeof error.config & {
       _retry?: boolean;
     };

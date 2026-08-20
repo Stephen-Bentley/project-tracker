@@ -1,5 +1,5 @@
 import React, { FormEvent, useEffect, useState } from 'react';
-import Task, { TaskStatus } from '../types/task';
+import { Task, TaskStatus } from '../types/task';
 import { User } from '../types';
 import { apiAssetSource } from '../utils/avatar';
 import SecureImage from './SecureImage';
@@ -195,7 +195,6 @@ const TaskDetailsModal: React.FC<Props> = ({
                       <SecureImage src={source} alt={image.filename} />
                     </a>
                   );
-                  );
                 })}
               </div>
             )}
@@ -216,7 +215,10 @@ const TaskDetailsModal: React.FC<Props> = ({
             )}
             <small>JPG, PNG, WebP, or GIF — up to 3 MB each.</small>
           </div>
-          <section className="task-history-section" aria-label="Comments and activity">
+          <section
+            className="task-history-section"
+            aria-label="Comments and activity"
+          >
             <div className="task-images-heading">
               <strong>Comments</strong>
               <span>{task.comments?.length || 0}</span>
@@ -256,7 +258,10 @@ const TaskDetailsModal: React.FC<Props> = ({
               </button>
             </div>
           </section>
-          <section className="task-history-section" aria-label="Activity history">
+          <section
+            className="task-history-section"
+            aria-label="Activity history"
+          >
             <div className="task-images-heading">
               <strong>Activity history</strong>
               <span>{task.activities?.length || 0}</span>
@@ -269,7 +274,8 @@ const TaskDetailsModal: React.FC<Props> = ({
                     <div>
                       <p>{activity.message}</p>
                       <small>
-                        {displayName(activity.actor)} · {formatDate(activity.createdAt)}
+                        {displayName(activity.actor)} ·{' '}
+                        {formatDate(activity.createdAt)}
                       </small>
                     </div>
                   </div>
