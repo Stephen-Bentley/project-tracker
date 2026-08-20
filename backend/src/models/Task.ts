@@ -1,11 +1,7 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
 export type TaskStatus =
-  | 'todo'
-  | 'in_progress'
-  | 'code_review'
-  | 'completed'
-  | 'done';
+  'todo' | 'in_progress' | 'code_review' | 'completed' | 'done';
 
 export interface ITaskImage {
   _id?: mongoose.Types.ObjectId;

@@ -1,4 +1,5 @@
 import React from 'react';
+import { logoutSession } from '../api/session';
 import { NavLink } from 'react-router-dom';
 
 interface NavigationProps {
@@ -6,9 +7,8 @@ interface NavigationProps {
 }
 
 const Navigation: React.FC<NavigationProps> = ({ isAdmin }) => {
-  const logout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('role');
+  const logout = async () => {
+    await logoutSession();
     window.location.replace('/login');
   };
 

@@ -22,7 +22,10 @@ export interface Project {
 
 export const projectService = {
   create: async (name: string, description?: string) => {
-    const response = await axiosInstance.post('/projects', { name, description });
+    const response = await axiosInstance.post('/projects', {
+      name,
+      description,
+    });
     return response.data;
   },
 
@@ -42,17 +45,23 @@ export const projectService = {
   },
 
   addMember: async (projectId: string, userId: string) => {
-    const response = await axiosInstance.post(`/projects/${projectId}/users`, { userId });
+    const response = await axiosInstance.post(`/projects/${projectId}/users`, {
+      userId,
+    });
     return response.data;
   },
 
   removeMember: async (projectId: string, userId: string) => {
-    const response = await axiosInstance.delete(`/projects/${projectId}/users/${userId}`);
+    const response = await axiosInstance.delete(
+      `/projects/${projectId}/users/${userId}`
+    );
     return response.data;
   },
 
   updateMembers: async (projectId: string, members: string[]) => {
-    const response = await axiosInstance.put(`/projects/${projectId}/members`, { members });
+    const response = await axiosInstance.put(`/projects/${projectId}/members`, {
+      members,
+    });
     return response.data;
   },
 };

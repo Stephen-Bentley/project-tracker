@@ -6,7 +6,7 @@ import {
   updateCurrentUser,
 } from '../api/users';
 import { User } from '../types';
-import { avatarSource } from '../utils/avatar';
+import SecureImage from '../components/SecureImage';
 import './Profile.css';
 
 interface ProfileProps {
@@ -128,11 +128,7 @@ const Profile: React.FC<ProfileProps> = ({ darkMode, onThemeChange }) => {
         <section className="profile-card profile-preview">
           <div className="profile-avatar">
             {avatarUrl && !avatarLoadFailed ? (
-              <img
-                src={avatarSource(avatarUrl)}
-                alt="Profile"
-                onError={() => setAvatarLoadFailed(true)}
-              />
+              <SecureImage src={avatarUrl} alt="Profile" />
             ) : (
               initials(displayName)
             )}

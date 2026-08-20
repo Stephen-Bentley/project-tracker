@@ -20,7 +20,13 @@ import {
 
 const router = Router();
 
-router.post('/', authenticate, requireAdmin, validate(createProjectSchema), createProject);
+router.post(
+  '/',
+  authenticate,
+  requireAdmin,
+  validate(createProjectSchema),
+  createProject
+);
 router.get('/mine', authenticate, getMyProjects);
 
 router.post(

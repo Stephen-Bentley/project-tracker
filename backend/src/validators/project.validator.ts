@@ -38,8 +38,10 @@ export const updateMembersSchema = z.object({
     }),
   }),
   body: z.object({
-    members: z.array(z.string().refine((val) => /^[0-9a-fA-F]{24}$/.test(val), {
-      message: 'Invalid user ID',
-    })),
+    members: z.array(
+      z.string().refine((val) => /^[0-9a-fA-F]{24}$/.test(val), {
+        message: 'Invalid user ID',
+      })
+    ),
   }),
 });

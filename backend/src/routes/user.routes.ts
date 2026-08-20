@@ -25,7 +25,12 @@ router
   .get(authenticate, getCurrentUser)
   .put(authenticate, validate(updateCurrentUserSchema), updateCurrentUser);
 
-router.put('/me/password', authenticate, validate(changePasswordSchema), changeCurrentUserPassword);
+router.put(
+  '/me/password',
+  authenticate,
+  validate(changePasswordSchema),
+  changeCurrentUserPassword
+);
 
 // Avatar images are public so browsers can render them in an <img> element.
 router.get('/:userId/avatar', getUserAvatar);

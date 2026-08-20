@@ -11,7 +11,11 @@ export class UserService {
     return user;
   }
 
-  static async updateCurrentUser(userId: string, name: string, avatarUrl: string) {
+  static async updateCurrentUser(
+    userId: string,
+    name: string,
+    avatarUrl: string
+  ) {
     const user = await User.findByIdAndUpdate(
       userId,
       { name: name.trim(), avatarUrl: avatarUrl?.trim() || '' },
@@ -24,7 +28,11 @@ export class UserService {
     return user;
   }
 
-  static async uploadAvatar(userId: string, buffer: Buffer, contentType: string) {
+  static async uploadAvatar(
+    userId: string,
+    buffer: Buffer,
+    contentType: string
+  ) {
     const user = await User.findById(userId).select(
       '+avatarImage +avatarContentType'
     );
@@ -62,7 +70,11 @@ export class UserService {
     };
   }
 
-  static async changePassword(userId: string, currentPassword: string, newPassword: string) {
+  static async changePassword(
+    userId: string,
+    currentPassword: string,
+    newPassword: string
+  ) {
     const user = await User.findById(userId).select('+password');
     if (!user) {
       throw new Error('User not found');
@@ -73,6 +85,8 @@ export class UserService {
     }
 
     user.password = newPassword;
+    user.refreshTokenHash = undefined;
+    user.refreshTokenExpiresAt = undefined;
     await user.save();
     return { message: 'Password updated successfully' };
   }
@@ -84,7 +98,12 @@ export class UserService {
     return users;
   }
 
-  static async createUser(data: { name: string; email: string; password: string; role?: string }) {
+  static async createUser(data: {
+    name: string;
+    email: string;
+    password: string;
+    role?: string;
+  }) {
     const existingUser = await User.findOne({ email: data.email });
     if (existingUser) {
       throw new Error('User already exists');
