@@ -49,7 +49,10 @@ pipeline {
 
         stage('Approve deployment') {
             when {
-                branch 'main'
+                expression {
+                    def branchName = env.BRANCH_NAME ?: env.GIT_BRANCH ?: ''
+                    return !branchName || branchName == 'dockerize-jenkins' || branchName.endsWith('/dockerize-jenkins')
+                }
             }
             steps {
                 script {
@@ -62,7 +65,10 @@ pipeline {
 
         stage('Deploy') {
             when {
-                branch 'main'
+                expression {
+                    def branchName = env.BRANCH_NAME ?: env.GIT_BRANCH ?: ''
+                    return !branchName || branchName == 'dockerize-jenkins' || branchName.endsWith('/dockerize-jenkins')
+                }
             }
             steps {
                 sh '''
