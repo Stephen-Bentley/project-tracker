@@ -1,10 +1,11 @@
 import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { vi } from 'vitest';
 import TaskDetailsModal from './TaskDetailsModal';
 import { Task } from '../types/task';
 import { User } from '../types';
 
-jest.mock('../api/api', () => ({
+vi.mock('../api/api', () => ({
   __esModule: true,
   default: {
     defaults: { baseURL: 'http://localhost:5000/api' },
@@ -49,10 +50,10 @@ test('shows comments, activity history, and status choices', () => {
     <TaskDetailsModal
       task={task}
       members={[currentUser]}
-      onClose={jest.fn()}
-      onSave={jest.fn().mockResolvedValue(undefined)}
-      onUpload={jest.fn().mockResolvedValue(undefined)}
-      onComment={jest.fn().mockResolvedValue(undefined)}
+      onClose={vi.fn()}
+      onSave={vi.fn().mockResolvedValue(undefined)}
+      onUpload={vi.fn().mockResolvedValue(undefined)}
+      onComment={vi.fn().mockResolvedValue(undefined)}
     />
   );
 
@@ -67,15 +68,15 @@ test('shows comments, activity history, and status choices', () => {
 });
 
 test('submits a new comment through the modal callback', async () => {
-  const onComment = jest.fn().mockResolvedValue(undefined);
+  const onComment = vi.fn().mockResolvedValue(undefined);
 
   render(
     <TaskDetailsModal
       task={task}
       members={[currentUser]}
-      onClose={jest.fn()}
-      onSave={jest.fn().mockResolvedValue(undefined)}
-      onUpload={jest.fn().mockResolvedValue(undefined)}
+      onClose={vi.fn()}
+      onSave={vi.fn().mockResolvedValue(undefined)}
+      onUpload={vi.fn().mockResolvedValue(undefined)}
       onComment={onComment}
     />
   );

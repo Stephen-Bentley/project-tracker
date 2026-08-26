@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const apiBaseUrl = process.env.REACT_APP_API_URL || '/api';
+const apiBaseUrl = import.meta.env.VITE_API_URL || '/api';
 
 let refreshPromise: Promise<string> | null = null;
 
