@@ -10,8 +10,8 @@ pipeline {
     parameters {
         string(
             name: 'DEPLOY_ENV_FILE',
-            defaultValue: '.env.production',
-            description: 'Path to the production environment file on the deployment host.'
+            defaultValue: '/var/jenkins_home/secrets/project-tracker/.env.production',
+            description: 'Path to the production environment file mounted into Jenkins.'
         )
         booleanParam(
             name: 'AUTO_DEPLOY',
@@ -30,8 +30,8 @@ pipeline {
                 sh '''
                     set -eu
                     docker run --rm \
-                        --volume "${PWD}:/workspace" \
-                        --workdir /workspace \
+                        --volumes-from "${HOSTNAME}" \
+                        --workdir "${WORKSPACE}" \
                         node:20-alpine \
                         sh -c 'npm ci && npm ci --prefix backend && npm ci --prefix frontend && npm run format:check && npm run build && npm test --prefix backend -- --runInBand'
                 '''
