@@ -32,7 +32,7 @@ pipeline {
                     docker run --rm \
                         --volumes-from "${HOSTNAME}" \
                         --workdir "${WORKSPACE}" \
-                        node:20-alpine \
+                        node:20 \
                         sh -c 'npm ci && npm ci --prefix backend && npm ci --legacy-peer-deps --prefix frontend && npm run format:check && npm run build && npm test --prefix backend -- --runInBand'
                 '''
             }
