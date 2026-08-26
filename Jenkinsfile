@@ -49,7 +49,7 @@ pipeline {
 
         stage('Approve deployment') {
             when {
-                branch 'main'
+                branch 'dockerize-jenkins'
             }
             steps {
                 script {
@@ -62,7 +62,7 @@ pipeline {
 
         stage('Deploy') {
             when {
-                branch 'main'
+                branch 'dockerize-jenkins'
             }
             steps {
                 sh '''
