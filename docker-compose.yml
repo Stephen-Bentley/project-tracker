@@ -62,6 +62,8 @@ services:
       MONGO_APP_PASSWORD: ${MONGO_APP_PASSWORD:?MONGO_APP_PASSWORD must be set}
     volumes:
       - production_mongo_data:/data/db
+    ports:
+      - '127.0.0.1:${MONGO_HOST_PORT:-27018}:27017'
     expose:
       - '27017'
     healthcheck:
