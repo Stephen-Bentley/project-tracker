@@ -26,6 +26,12 @@ pipeline {
 
     stages {
         stage('Verify') {
+            agent {
+                docker {
+                    image 'node:20-alpine'
+                    reuseNode true
+                }
+            }
             steps {
                 sh '''
                     set -eu
