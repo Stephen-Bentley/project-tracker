@@ -26,19 +26,14 @@ pipeline {
 
     stages {
         stage('Verify') {
-            agent {
-                docker {
-                    image 'node:20-alpine'
-                    reuseNode true
-                }
-            }
             steps {
                 sh '''
                     set -eu
-                    npm ci
-                    npm run format:check
-                    npm run build
-                    npm test --prefix backend -- --runInBand
+                    docker run --rm \
+                        --volume "${PWD}:/workspace" \
+                        --workdir /workspace \
+                        node:20-alpine \
+                        sh -c 'npm ci && npm ci --prefix backend && npm ci --prefix frontend && npm run format:check && npm run build && npm test --prefix backend -- --runInBand'
                 '''
             }
         }
