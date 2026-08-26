@@ -33,7 +33,7 @@ pipeline {
                         --volumes-from "${HOSTNAME}" \
                         --workdir "${WORKSPACE}" \
                         node:20-alpine \
-                        sh -c 'npm ci && npm ci --prefix backend && npm ci --prefix frontend && npm run format:check && npm run build && npm test --prefix backend -- --runInBand'
+                        sh -c 'npm ci && npm ci --prefix backend && npm ci --legacy-peer-deps --prefix frontend && npm run format:check && npm run build && npm test --prefix backend -- --runInBand'
                 '''
             }
         }
