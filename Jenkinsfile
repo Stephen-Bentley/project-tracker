@@ -75,8 +75,23 @@ pipeline {
                     set -eu
                     test -f "${DEPLOY_ENV_FILE}"
                     IMAGE_TAG="${IMAGE_TAG}" docker compose --env-file "${DEPLOY_ENV_FILE}" up -d --build --remove-orphans
-                    FRONTEND_HOST_PORT=$(grep '^FRONTEND_HOST_PORT=' "${DEPLOY_ENV_FILE}" | cut -d= -f2- || echo 7448)
-                    curl --fail --retry 12 --retry-delay 5 "http://localhost:${FRONTEND_HOST_PORT}/"
+
+                    FRONTEND_CONTAINER=$(docker compose --env-file "${DEPLOY_ENV_FILE}" ps -q frontend)
+                    test -n "${FRONTEND_CONTAINER}"
+
+                    attempt=1
+                    while [ "${attempt}" -le 12 ]; do
+                        FRONTEND_STATUS=$(docker inspect --format '{{.State.Health.Status}}' "${FRONTEND_CONTAINER}" 2>/dev/null || true)
+                        if [ "${FRONTEND_STATUS}" = 'healthy' ]; then
+                            exit 0
+                        fi
+                        sleep 5
+                        attempt=$((attempt + 1))
+                    done
+
+                    docker compose --env-file "${DEPLOY_ENV_FILE}" ps
+                    docker compose --env-file "${DEPLOY_ENV_FILE}" logs --tail=100 frontend backend mongodb
+                    exit 1
                 '''
             }
         }
