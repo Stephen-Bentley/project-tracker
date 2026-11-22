@@ -1,0 +1,21 @@
+services:
+  postgres-staging:
+    image: postgres:17-alpine
+    container_name: project-tracker-postgres-staging
+    restart: unless-stopped
+    ports:
+      - '${POSTGRES_STAGING_PORT:-5433}:5432'
+    environment:
+      POSTGRES_DB: ${POSTGRES_STAGING_DB:-project_tracker_staging}
+      POSTGRES_USER: ${POSTGRES_STAGING_USER:-project_tracker_staging}
+      POSTGRES_PASSWORD: ${POSTGRES_STAGING_PASSWORD:?POSTGRES_STAGING_PASSWORD must be set}
+    volumes:
+      - postgres_staging_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U "$${POSTGRES_STAGING_USER:-project_tracker_staging}" -d "$${POSTGRES_STAGING_DB:-project_tracker_staging}"']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  postgres_staging_data:
