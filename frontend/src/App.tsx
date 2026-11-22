@@ -4,6 +4,7 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Projects from './pages/Projects';
 import ProjectBoard from './pages/ProjectBoard';
+import TaskDetails from './pages/TaskDetails';
 import AdminProjectsPage from './pages/AdminProjects';
 import Navigation from './components/Navigation';
 import Profile from './pages/Profile';
@@ -50,6 +51,12 @@ const App: React.FC = () => {
           element={
             isAuthenticated ? <ProjectBoard /> : <Navigate to="/login" />
           }
+        />
+
+        {/* Individual Task Details */}
+        <Route
+          path="/projects/:projectId/task/:taskId"
+          element={isAuthenticated ? <TaskDetails /> : <Navigate to="/login" />}
         />
 
         <Route
