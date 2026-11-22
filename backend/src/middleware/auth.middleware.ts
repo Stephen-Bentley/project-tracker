@@ -1,11 +1,11 @@
 import { Request, Response, NextFunction } from 'express';
-import { verifyToken } from '../utils/jwt';
+import {
+  AuthenticatedActor,
+  getActorFromAuthorizationHeader,
+} from '../utils/authentication';
 
 export interface AuthRequest extends Request {
-  user?: {
-    userId: string;
-    role: 'admin' | 'user';
-  };
+  user?: AuthenticatedActor;
 }
 
 export const authenticate = (
@@ -20,9 +20,7 @@ export const authenticate = (
   }
 
   try {
-    const token = authHeader.split(' ')[1];
-    const decoded = verifyToken(token);
-    req.user = decoded;
+    req.user = getActorFromAuthorizationHeader(authHeader);
     next();
   } catch {
     return res.status(401).json({ message: 'Invalid token' });

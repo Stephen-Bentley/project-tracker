@@ -8,6 +8,7 @@ import projectRoutes from './routes/project.routes';
 import taskRoutes from './routes/task.routes';
 import { globalErrorHandler } from './middleware/error.middleware';
 import { env } from './config/env';
+import { handleHttpMcpRequest } from './mcp/http';
 
 const app = express();
 
@@ -32,6 +33,15 @@ const authLimiter = rateLimit({
 
 app.use('/api/', apiLimiter);
 app.use('/api/auth/login', authLimiter);
+
+const mcpLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 300,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+app.post('/mcp', mcpLimiter, handleHttpMcpRequest);
 
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
