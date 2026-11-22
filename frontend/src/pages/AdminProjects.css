@@ -35,7 +35,7 @@
   padding: 9px 13px;
 }
 .admin-tabs button.active {
-  background: #15803d;
+  background: var(--primary);
   color: #fff;
 }
 .admin-alert {
@@ -75,7 +75,7 @@
   padding: 22px;
 }
 .admin-project-card {
-  border-top: 4px solid #22c55e;
+  border-top: 4px solid var(--primary);
 }
 .admin-project-card h3 {
   color: var(--text);
@@ -144,8 +144,8 @@
   padding: 7px;
 }
 .add-member button {
-  background: #15803d;
-  border-color: #15803d;
+  background: var(--primary);
+  border-color: var(--primary);
   color: #fff;
 }
 .remove-member:disabled,
@@ -182,7 +182,7 @@
 }
 .admin-form button {
   align-self: flex-start;
-  background: #15803d;
+  background: var(--primary);
   border: 0;
   border-radius: 7px;
   color: #fff;

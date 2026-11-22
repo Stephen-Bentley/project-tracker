@@ -4,11 +4,22 @@ import { z } from 'zod';
 import Project from '../models/Project';
 import Task from '../models/Task';
 import { ProjectService } from '../services/project.service';
+import { TaskService } from '../services/task.service';
 import { AuthenticatedActor } from '../utils/authentication';
 
 const objectIdSchema = z
   .string()
-  .refine(mongoose.Types.ObjectId.isValid, 'Must be a valid MongoDB object ID.');
+  .refine(
+    mongoose.Types.ObjectId.isValid,
+    'Must be a valid MongoDB object ID.'
+  );
+const taskStatusSchema = z.enum([
+  'todo',
+  'in_progress',
+  'code_review',
+  'completed',
+  'done',
+]);
 
 class McpNotFoundError extends Error {}
 
@@ -19,8 +30,12 @@ const person = (value: unknown) => {
     id: String(record._id),
     name: typeof record.name === 'string' ? record.name : undefined,
     email: typeof record.email === 'string' ? record.email : undefined,
-    role: record.role === 'admin' || record.role === 'user' ? record.role : undefined,
-    avatarUrl: typeof record.avatarUrl === 'string' ? record.avatarUrl : undefined,
+    role:
+      record.role === 'admin' || record.role === 'user'
+        ? record.role
+        : undefined,
+    avatarUrl:
+      typeof record.avatarUrl === 'string' ? record.avatarUrl : undefined,
   };
 };
 
@@ -58,15 +73,24 @@ const toolFailure = (message: string) => ({
   content: [{ type: 'text' as const, text: message }],
 });
 
-const assertProjectMember = async (projectId: string, actor: AuthenticatedActor) => {
+const assertProjectMember = async (
+  projectId: string,
+  actor: AuthenticatedActor
+) => {
   const project = await Project.findById(projectId);
-  if (!project || !project.members.some((member) => member.toString() === actor.userId)) {
+  if (
+    !project ||
+    !project.members.some((member) => member.toString() === actor.userId)
+  ) {
     throw new McpNotFoundError();
   }
   return project;
 };
 
-const listProjectTasks = async (projectId: string, actor: AuthenticatedActor) => {
+const listProjectTasks = async (
+  projectId: string,
+  actor: AuthenticatedActor
+) => {
   const project = await assertProjectMember(projectId, actor);
   return Task.find({ project: project._id })
     .populate('assignedTo', 'name email avatarUrl')
@@ -78,6 +102,13 @@ const getTask = async (taskId: string, actor: AuthenticatedActor) => {
     .populate('assignedTo', 'name email avatarUrl')
     .populate('createdBy', 'name email');
 
+  if (!task) throw new McpNotFoundError();
+  await assertProjectMember(task.project.toString(), actor);
+  return task;
+};
+
+const getTaskForMember = async (taskId: string, actor: AuthenticatedActor) => {
+  const task = await Task.findById(taskId);
   if (!task) throw new McpNotFoundError();
   await assertProjectMember(task.project.toString(), actor);
   return task;
@@ -114,13 +145,17 @@ export const createMcpServer = (actor: AuthenticatedActor) => {
   server.registerTool(
     'get_project',
     {
-      description: 'Get safe details for one project the authenticated user belongs to.',
+      description:
+        'Get safe details for one project the authenticated user belongs to.',
       inputSchema: z.object({ projectId: objectIdSchema }).strict(),
       annotations: { readOnlyHint: true },
     },
     async ({ projectId }) =>
       safeTool(async () => {
-        const project = await ProjectService.getProjectById(projectId, actor.userId).catch(() => {
+        const project = await ProjectService.getProjectById(
+          projectId,
+          actor.userId
+        ).catch(() => {
           throw new McpNotFoundError();
         });
         return { project: serializeProject(project) };
@@ -130,7 +165,8 @@ export const createMcpServer = (actor: AuthenticatedActor) => {
   server.registerTool(
     'list_project_tasks',
     {
-      description: 'List safe task summaries for one project the authenticated user belongs to.',
+      description:
+        'List safe task summaries for one project the authenticated user belongs to.',
       inputSchema: z.object({ projectId: objectIdSchema }).strict(),
       annotations: { readOnlyHint: true },
     },
@@ -144,7 +180,8 @@ export const createMcpServer = (actor: AuthenticatedActor) => {
   server.registerTool(
     'get_task',
     {
-      description: 'Get safe details for one task in a project the authenticated user belongs to.',
+      description:
+        'Get safe details for one task in a project the authenticated user belongs to.',
       inputSchema: z.object({ taskId: objectIdSchema }).strict(),
       annotations: { readOnlyHint: true },
     },
@@ -152,6 +189,103 @@ export const createMcpServer = (actor: AuthenticatedActor) => {
       safeTool(async () => {
         const task = await getTask(taskId, actor);
         return { task: serializeTask(task) };
+      })
+  );
+
+  server.registerTool(
+    'create_task',
+    {
+      description:
+        'Create a task in a project the authenticated user belongs to.',
+      inputSchema: z
+        .object({
+          title: z.string().trim().min(1).max(500),
+          projectId: objectIdSchema,
+          description: z.string().max(10000).optional(),
+          assignedTo: objectIdSchema.nullable().optional(),
+          status: taskStatusSchema.optional(),
+        })
+        .strict(),
+      annotations: { readOnlyHint: false, idempotentHint: false },
+    },
+    async ({ title, projectId, description, assignedTo, status }) =>
+      safeTool(async () => {
+        const created = await TaskService.createTask(
+          title,
+          description,
+          projectId,
+          assignedTo || null,
+          status || 'todo',
+          actor.userId
+        );
+        const task = await getTask(created._id.toString(), actor);
+        return { task: serializeTask(task) };
+      })
+  );
+
+  server.registerTool(
+    'update_task',
+    {
+      description:
+        'Update fields on a task in a project the authenticated user belongs to.',
+      inputSchema: z
+        .object({
+          taskId: objectIdSchema,
+          title: z.string().trim().min(1).max(500).optional(),
+          description: z.string().max(10000).optional(),
+          assignedTo: objectIdSchema.nullable().optional(),
+          status: taskStatusSchema.optional(),
+        })
+        .strict()
+        .refine(
+          (value) => Object.keys(value).some((key) => key !== 'taskId'),
+          'At least one task field is required.'
+        ),
+      annotations: { readOnlyHint: false, idempotentHint: false },
+    },
+    async ({ taskId, ...updates }) =>
+      safeTool(async () => {
+        await getTaskForMember(taskId, actor);
+        await TaskService.updateTask(taskId, updates, actor.userId);
+        return { task: serializeTask(await getTask(taskId, actor)) };
+      })
+  );
+
+  server.registerTool(
+    'assign_task',
+    {
+      description:
+        'Assign or unassign a task in a project the authenticated user belongs to.',
+      inputSchema: z
+        .object({ taskId: objectIdSchema, userId: objectIdSchema.nullable() })
+        .strict(),
+      annotations: { readOnlyHint: false, idempotentHint: false },
+    },
+    async ({ taskId, userId }) =>
+      safeTool(async () => {
+        await TaskService.assignUserToTask(taskId, userId, actor.userId);
+        return { task: serializeTask(await getTask(taskId, actor)) };
+      })
+  );
+
+  server.registerTool(
+    'add_task_comment',
+    {
+      description:
+        'Add a comment to a task in a project the authenticated user belongs to.',
+      inputSchema: z
+        .object({
+          taskId: objectIdSchema,
+          body: z.string().trim().min(1).max(2000),
+        })
+        .strict(),
+      annotations: { readOnlyHint: false, idempotentHint: false },
+    },
+    async ({ taskId, body }) =>
+      safeTool(async () => {
+        await getTaskForMember(taskId, actor);
+        await TaskService.addComment(taskId, body, actor.userId);
+        return { task: serializeTask(await getTask(taskId, actor)) };
       })
   );
 

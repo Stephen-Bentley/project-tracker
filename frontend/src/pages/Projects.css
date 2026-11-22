@@ -21,7 +21,7 @@
 .project-card {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-top: 4px solid #22c55e;
+  border-top: 4px solid var(--primary);
   border-radius: 12px;
   box-shadow: var(--shadow);
   cursor: pointer;

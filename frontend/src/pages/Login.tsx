@@ -23,12 +23,14 @@ const Login: React.FC = () => {
   };
 
   return (
-    <div style={styles.container}>
-      <form style={styles.form} onSubmit={handleSubmit}>
-        <h2 style={styles.title}>Project Tracker</h2>
+    <main className="login-page">
+      <form className="login-card" onSubmit={handleSubmit}>
+        <div className="login-card__brand">Project Tracker</div>
+        <h1>Welcome back</h1>
+        <p>Sign in to continue to your workspace.</p>
 
         <input
-          style={styles.input}
+          className="login-card__input"
           type="email"
           placeholder="Email"
           value={email}
@@ -36,53 +38,17 @@ const Login: React.FC = () => {
         />
 
         <input
-          style={styles.input}
+          className="login-card__input"
           type="password"
           placeholder="Password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
         />
 
-        <button style={styles.button}>Login</button>
+        <button className="login-card__submit">Login</button>
       </form>
-    </div>
+    </main>
   );
-};
-
-const styles: Record<string, React.CSSProperties> = {
-  container: {
-    height: '100vh',
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  form: {
-    background: '#fff',
-    padding: 30,
-    borderRadius: 8,
-    width: 320,
-    boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
-  },
-  title: {
-    marginBottom: 20,
-    color: '#16a34a',
-  },
-  input: {
-    width: '100%',
-    padding: 10,
-    marginBottom: 12,
-    borderRadius: 4,
-    border: '1px solid #ddd',
-  },
-  button: {
-    width: '100%',
-    padding: 10,
-    background: '#22c55e',
-    color: '#fff',
-    border: 'none',
-    borderRadius: 4,
-    cursor: 'pointer',
-  },
 };
 
 export default Login;

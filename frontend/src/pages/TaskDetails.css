@@ -1,7 +1,7 @@
 .task-details-page {
   min-height: 100vh;
-  background-color: var(--page-bg);
-  color: var(--text-primary);
+  background-color: var(--light-gray);
+  color: var(--text);
 }
 
 .task-details-page--loading {
@@ -13,8 +13,8 @@
 
 .task-details-nav {
   padding: 0.75rem 1rem;
-  border-bottom: 1px solid var(--border-color);
-  background-color: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+  background-color: var(--surface);
 }
 
 .task-details-nav button {
@@ -23,15 +23,15 @@
   gap: 0.5rem;
   padding: 0.5rem 1rem;
   font-size: 0.875rem;
-  color: var(--text-secondary);
+  color: var(--muted);
   background-color: transparent;
   border: none;
   cursor: pointer;
 }
 
 .task-details-nav button:hover {
-  color: var(--text-primary);
-  background-color: var(--bg-tertiary);
+  color: var(--text);
+  background-color: var(--surface-soft);
   border-radius: 4px;
 }
 
@@ -46,8 +46,8 @@
   flex-direction: column;
   gap: 1.5rem;
   padding: 2rem 1rem;
-  background-color: var(--bg-secondary);
-  border-bottom: 1px solid var(--border-color);
+  background-color: var(--surface);
+  border-bottom: 1px solid var(--border);
   margin-bottom: 2rem;
 }
 
@@ -61,7 +61,7 @@
 .task-title-input {
   font-size: 2rem;
   font-weight: 700;
-  color: var(--text-primary);
+  color: var(--text);
   background: transparent;
   border: none;
   border-bottom: 1px solid transparent;
@@ -72,7 +72,7 @@
 
 .task-title-input:focus {
   outline: none;
-  border-bottom-color: var(--border-color);
+  border-bottom-color: var(--accent);
 }
 
 .status-badge {
@@ -83,12 +83,12 @@
 }
 
 .status-badge--todo {
-  background-color: var(--bg-tertiary);
-  color: var(--text-secondary);
+  background-color: var(--surface-soft);
+  color: var(--muted);
 }
 .status-badge--in_progress {
   background-color: #e3f2fd;
-  color: #1976d2;
+  color: #1d4ed8;
 }
 .status-badge--code_review {
   background-color: #fff3e0;
@@ -116,7 +116,7 @@
 .status-select-wrapper label,
 .assignee-select-wrapper label {
   font-size: 0.875rem;
-  color: var(--text-secondary);
+  color: var(--muted);
   font-weight: 600;
 }
 
@@ -124,9 +124,9 @@
   padding: 0.5rem 2rem 0.5rem 0.75rem;
   font-size: 1rem;
   border-radius: 6px;
-  border: 1px solid var(--border-color);
-  background-color: var(--bg-tertiary);
-  color: var(--text-primary);
+  border: 1px solid var(--border-strong);
+  background-color: var(--input);
+  color: var(--text);
   cursor: pointer;
 }
 
@@ -135,7 +135,7 @@
   align-items: center;
   gap: 0.5rem;
   font-size: 0.875rem;
-  color: var(--text-secondary);
+  color: var(--muted);
 }
 
 .task-avatar {
@@ -143,7 +143,7 @@
   height: 32px;
   border-radius: 50%;
   overflow: hidden;
-  background-color: var(--bg-tertiary);
+  background-color: var(--surface-soft);
 }
 
 .task-avatar img {
@@ -157,7 +157,7 @@
   text-align: center;
   line-height: 32px;
   font-size: 0.75rem;
-  color: var(--text-secondary);
+  color: var(--muted);
 }
 
 .task-details-main-content {
@@ -186,16 +186,16 @@
 
 .section-title {
   font-size: 1.125rem;
-  color: var(--text-secondary);
+  color: var(--muted);
 }
 
 textarea {
   width: 100%;
   padding: 1rem;
   border-radius: 8px;
-  border: 1px solid var(--border-color);
-  background-color: var(--bg-secondary);
-  color: var(--text-primary);
+  border: 1px solid var(--border-strong);
+  background-color: var(--input);
+  color: var(--text);
   font-family: inherit;
   font-size: 1rem;
   resize: vertical;
@@ -222,7 +222,7 @@ textarea {
 
 .task-comment-item {
   padding-bottom: 1.5rem;
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border);
 }
 
 .task-comment-meta {
@@ -238,7 +238,7 @@ textarea {
 
 .comment-body {
   margin: 0;
-  color: var(--text-primary);
+  color: var(--text);
   line-height: 1.5;
 }
 
@@ -258,7 +258,7 @@ textarea {
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background-color: var(--border-color);
+  background-color: var(--border);
   margin-top: 6px;
   flex-shrink: 0;
 }
@@ -269,7 +269,7 @@ textarea {
 }
 
 .task-activity-content small {
-  color: var(--text-secondary);
+  color: var(--muted);
 }
 
 .task-form-actions {
@@ -278,7 +278,7 @@ textarea {
   gap: 1rem;
   margin-top: 2rem;
   padding-top: 2rem;
-  border-top: 1px solid var(--border-color);
+  border-top: 1px solid var(--border);
 }
 
 .btn-primary,
@@ -292,26 +292,26 @@ textarea {
 }
 
 .btn-primary {
-  background-color: #1976d2;
+  background-color: var(--primary);
   color: white;
 }
 
 .btn-primary:hover {
-  background-color: #1565c0;
+  background-color: var(--primary-strong);
 }
 
 .btn-primary:disabled {
-  background-color: var(--border-color);
+  background-color: var(--border);
   cursor: not-allowed;
 }
 
 .btn-secondary {
-  background-color: var(--bg-tertiary);
-  color: var(--text-primary);
+  background-color: var(--surface-soft);
+  color: var(--text);
 }
 
 .task-details-sidebar {
-  background-color: var(--bg-secondary);
+  background-color: var(--surface);
   padding: 1.5rem;
   border-radius: 8px;
   height: fit-content;

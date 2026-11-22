@@ -99,7 +99,7 @@ const TaskDetails: React.FC = () => {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!task || !taskId) return;
+    if (!task || !taskId || !projectId) return;
 
     setSaving(true);
     try {

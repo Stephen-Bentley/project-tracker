@@ -80,7 +80,7 @@
 }
 
 .add-task-button {
-  background: #15803d;
+  background: var(--primary);
   border: 0;
   border-radius: 8px;
   box-shadow: 0 5px 10px rgba(21, 128, 61, 0.2);
@@ -92,7 +92,7 @@
   white-space: nowrap;
 }
 .add-task-button:hover {
-  background: #166534;
+  background: var(--primary-strong);
   transform: translateY(-1px);
 }
 
@@ -149,7 +149,7 @@
   color: #2563eb;
 }
 .board-column--code_review .column-title {
-  color: #15803d;
+  color: var(--primary-strong);
 }
 .board-column--completed .column-title {
   color: #64748b;
@@ -191,7 +191,7 @@
   border-left-color: #3b82f6;
 }
 .board-column--code_review .task-card {
-  border-left-color: #22c55e;
+  border-left-color: var(--primary);
 }
 .board-column--completed .task-card {
   border-left-color: #64748b;
@@ -480,8 +480,8 @@
   color: var(--text);
 }
 .task-save {
-  background: #15803d;
-  border: 1px solid #15803d;
+  background: var(--primary);
+  border: 1px solid var(--primary);
   color: #fff;
 }
 .task-save:disabled {
