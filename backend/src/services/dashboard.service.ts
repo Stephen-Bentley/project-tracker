@@ -6,6 +6,7 @@ const ACTIVE_STATUSES: TaskStatus[] = ['todo', 'in_progress', 'code_review'];
 
 export interface DashboardTask {
   id: string;
+  taskId: string;
   projectId: string;
   projectName: string;
   title: string;
@@ -113,6 +114,7 @@ const toDashboardTask = (
 
   return {
     id: task._id.toString(),
+    taskId: task._id.toString(),
     projectId: task.project._id.toString(),
     projectName: task.project.name,
     title: task.title,

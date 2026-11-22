@@ -81,7 +81,11 @@ const Dashboard: React.FC = () => {
   };
 
   const openTask = (task: { taskId?: string; projectId: string }) => {
-    navigate(`/projects/${task.projectId}`);
+    if (task.taskId) {
+      navigate(`/projects/${task.projectId}/task/${task.taskId}`);
+    } else {
+      navigate(`/projects/${task.projectId}`);
+    }
   };
 
   if (loading) {
@@ -225,7 +229,9 @@ const Dashboard: React.FC = () => {
               <DashboardList
                 title="Today's focus"
                 items={data.todaysFocus}
-                onOpen={openTask}
+                onOpen={(item) =>
+                  openTask({ taskId: item.taskId, projectId: item.projectId })
+                }
               />
               <section className="dashboard-panel">
                 <div className="dashboard-section-heading dashboard-section-heading--compact">
@@ -335,7 +341,13 @@ const DashboardList = ({
   onOpen,
 }: {
   title: string;
-  items: DashboardData['todaysFocus'];
+  items: Array<{
+    taskId: string;
+    projectId: string;
+    label: string;
+    title: string;
+    detail: string;
+  }>;
   onOpen: (item: { taskId: string; projectId: string }) => void;
 }) => (
   <section className="dashboard-panel">
