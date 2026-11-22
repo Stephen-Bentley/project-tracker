@@ -102,7 +102,7 @@ export class UserService {
     name: string;
     email: string;
     password: string;
-    role?: string;
+    role?: 'admin' | 'user';
   }) {
     const existingUser = await User.findOne({ email: data.email });
     if (existingUser) {

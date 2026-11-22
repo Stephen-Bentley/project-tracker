@@ -152,6 +152,7 @@ The current status compatibility rule is that `done` is accepted in the backend 
 - CORS uses the comma-separated `CORS_ORIGINS` allow-list and defaults to the local frontend origin.
 - Image storage is memory-buffered during upload and persisted inside MongoDB. This increases document and database size as images accumulate.
 - Environment configuration requires `MONGO_URI` and `JWT_SECRET`; `PORT` and `CORS_ORIGINS` are optional.
+- Production deployment is defined by `docker-compose.yml`: Nginx serves the frontend and proxies `/api` to the backend, while MongoDB runs as a separate service with a named persistent volume. Production values are supplied through an ignored env file based on `.env.example`.
 - The repository has separate frontend and backend development commands and a root command that runs both with `concurrently`.
 
 ## 9. Verification
@@ -162,6 +163,7 @@ The current status compatibility rule is that `done` is accepted in the backend 
 - Backend security tests cover task membership authorization, assignment membership, and authenticated image access.
 - No automated browser or end-to-end checks are currently documented.
 - Database indexes, production deployment behavior, CORS policy, JWT secret rotation, and public avatar access have not been verified in an environment outside local source inspection.
+- Docker image builds and Compose startup remain unverified in this environment because Docker is unavailable.
 
 ## 10. Known limitations
 
@@ -174,6 +176,7 @@ The current status compatibility rule is that `done` is accepted in the backend 
 - Image GET endpoints are public and do not check the requesting user's project or account access.
 - Project deletion, task deletion UI, task history, comments, notifications, due dates, priorities, and audit logs are not implemented.
 - The repository's current automated test coverage does not prove authentication, authorization, board filtering, task editing, uploads, or logout behavior.
+- The production MongoDB service is self-hosted and still requires an externally stored, tested backup process.
 
 ## 11. Source map
 
@@ -189,3 +192,6 @@ The current status compatibility rule is that `done` is accepted in the backend 
 - [frontend/src/components/TaskDetailsModal.tsx](frontend/src/components/TaskDetailsModal.tsx): task editing and image upload UI.
 - [frontend/src/api/](frontend/src/api/): frontend API clients.
 - [frontend/src/types/](frontend/src/types/): client-side data contracts.
+- [docker-compose.yml](docker-compose.yml): production service topology and environment wiring.
+- [backend/Dockerfile](backend/Dockerfile) and [frontend/Dockerfile](frontend/Dockerfile): production image builds.
+- [frontend/nginx.conf](frontend/nginx.conf): frontend serving, SPA fallback, and backend proxy.
