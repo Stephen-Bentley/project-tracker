@@ -1,10 +1,12 @@
 import { verifyToken } from './jwt';
 import { createHash } from 'crypto';
 import { pool } from '../config/db';
+import { env } from '../config/env';
 
 export interface AuthenticatedActor {
   userId: string;
   role: 'admin' | 'user';
+  canCreateProjectsViaMcp?: true;
 }
 
 export class AuthenticationError extends Error {
@@ -54,19 +56,23 @@ const getActorFromApiToken = async (
 ): Promise<AuthenticatedActor> => {
   const tokenHash = createHash('sha256').update(token).digest('hex');
   const result = await pool.query(
-    `SELECT u.id, u.role FROM api_tokens t JOIN users u ON u.id = t.user_id
+    `SELECT u.id, u.role, u.email FROM api_tokens t JOIN users u ON u.id = t.user_id
      WHERE t.token_hash = $1 AND t.revoked_at IS NULL
        AND (t.expires_at IS NULL OR t.expires_at > NOW())`,
     [tokenHash]
   );
   const user = result.rows[0] as
-    { id: string; role: 'admin' | 'user' } | undefined;
+    { id: string; role: AuthenticatedActor['role']; email: string } | undefined;
   if (!user) throw new AuthenticationError();
   await pool.query(
     'UPDATE api_tokens SET last_used_at = NOW() WHERE token_hash = $1',
     [tokenHash]
   );
-  return { userId: user.id, role: user.role };
+  const actor: AuthenticatedActor = { userId: user.id, role: user.role };
+  if (user.email === env.MCP_AUTOMATION_EMAIL) {
+    actor.canCreateProjectsViaMcp = true;
+  }
+  return actor;
 };
 
 export const getActorFromAuthorizationHeader = (

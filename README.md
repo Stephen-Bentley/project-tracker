@@ -25,7 +25,7 @@ The MongoDB copy tool is retained only for a guarded, copy-only migration into a
 
 ## MCP
 
-The MCP endpoint is `POST /mcp`. It provides project-scoped read and task-write tools through the official MCP SDK. Use the dedicated automation account and its revocable `mcp_...` credential rather than a personal JWT.
+The MCP endpoint is `POST /mcp`. It provides project creation, project-scoped reads, and task writes through the official MCP SDK. Use the dedicated automation account and its revocable `mcp_...` credential rather than a personal JWT.
 
 Provisioning, client setup, token rotation, and revocation are documented in [MCP server](docs/mcp.md).
 

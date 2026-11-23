@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { ProjectService } from '../services/project.service';
 import { TaskService } from '../services/task.service';
 import { AuthenticatedActor } from '../utils/authentication';
+import { createProjectBodySchema } from '../validators/project.validator';
 
 const objectIdSchema = z
   .string()
@@ -136,6 +137,32 @@ export const createMcpServer = (actor: AuthenticatedActor) => {
         return { project: serializeProject(project) };
       })
   );
+
+  if (actor.role === 'admin' || actor.canCreateProjectsViaMcp) {
+    server.registerTool(
+      'create_project',
+      {
+        description:
+          'Create a project and make the authenticated user its creator and a member.',
+        inputSchema: createProjectBodySchema
+          .extend({
+            name: z.string().trim().min(1, 'Project name is required'),
+          })
+          .strict(),
+        annotations: { readOnlyHint: false, idempotentHint: false },
+      },
+      async ({ name, description, addAutomationMember }) =>
+        safeTool(async () => {
+          const project = await ProjectService.createProject(
+            name,
+            description ?? '',
+            actor.userId,
+            addAutomationMember
+          );
+          return { project: serializeProject(project) };
+        })
+    );
+  }
 
   server.registerTool(
     'list_project_tasks',

@@ -1,4 +1,6 @@
 import jwt from 'jsonwebtoken';
+import { pool } from '../config/db';
+import { env } from '../config/env';
 import {
   AuthenticationError,
   getActorFromAuthorizationHeader,
@@ -9,11 +11,35 @@ import { signToken } from './jwt';
 describe('shared bearer authentication', () => {
   const actor = { userId: 'user-123', role: 'user' as const };
 
-  it('returns only the application actor for a valid bearer token', () => {
+  afterEach(() => jest.restoreAllMocks());
+
+  it('returns only the application actor for a valid bearer token', async () => {
     const token = signToken(actor);
 
-    expect(getActorFromAuthorizationHeader(`Bearer ${token}`)).toEqual(actor);
+    await expect(
+      getActorFromAuthorizationHeader(`Bearer ${token}`)
+    ).resolves.toEqual(actor);
   });
+
+  it.each([
+    [env.MCP_AUTOMATION_EMAIL, true],
+    ['member@mcp.test', undefined],
+  ])(
+    'sets project-creation permission for the configured automation account only',
+    async (email, permission) => {
+      jest
+        .spyOn(pool, 'query')
+        .mockResolvedValueOnce({
+          rows: [{ id: actor.userId, role: actor.role, email }],
+        } as never)
+        .mockResolvedValueOnce({ rows: [] } as never);
+
+      const authenticated =
+        await getActorFromAuthorizationHeader('Bearer mcp_test');
+      expect(authenticated.role).toBe('user');
+      expect(authenticated.canCreateProjectsViaMcp).toBe(permission);
+    }
+  );
 
   it.each([
     undefined,

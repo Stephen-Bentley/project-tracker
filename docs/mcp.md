@@ -14,6 +14,12 @@ The command creates the account if necessary, adds it to all existing projects, 
 
 New projects add the automation account automatically when it exists. Send `addAutomationMember: false` while creating a project to opt out.
 
+## Creating projects and completed tasks
+
+`create_project` is available to admins and bearer tokens issued to the configured MCP automation account. It accepts `name`, optional `description`, and optional `addAutomationMember`. The authenticated account becomes the project creator and a member. When the automation account creates a project, an admin can add their own account from the admin project screen to open its board.
+
+Use the returned project ID as `projectId` in `create_task`. To backfill work that is already finished, set `status` to `completed` when creating the task. Use `list_my_projects` and `list_project_tasks` to check for existing entries before creating new ones.
+
 ## Credentials and revocation
 
 Use the opaque credential from the local token file as the HTTP bearer token. Only its SHA-256 hash is stored in PostgreSQL. The server records when it was last used and rejects revoked credentials immediately.
