@@ -10,6 +10,8 @@
     "mcp:stdio": "ts-node-dev --transpile-only src/mcp/stdio.ts",
     "mcp:stdio:start": "node dist/mcp/stdio.js",
     "migrate:postgres:staging": "node scripts/migrate-mongo-to-postgres.cjs",
+    "mcp-token:provision": "node scripts/provision-mcp-automation.cjs",
+    "mcp-token:revoke": "node scripts/revoke-mcp-token.cjs",
     "test": "jest"
   },
   "keywords": [],

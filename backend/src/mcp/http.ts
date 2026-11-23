@@ -5,9 +5,13 @@ import { createMcpServer } from './server';
 
 export const handleHttpMcpRequest = async (req: Request, res: Response) => {
   try {
-    const actor = getActorFromAuthorizationHeader(req.headers.authorization);
+    const actor = await getActorFromAuthorizationHeader(
+      req.headers.authorization
+    );
     const server = createMcpServer(actor);
-    const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
+    const transport = new StreamableHTTPServerTransport({
+      sessionIdGenerator: undefined,
+    });
 
     await server.connect(transport);
     await transport.handleRequest(req, res, req.body);

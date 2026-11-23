@@ -1,12 +1,14 @@
-import mongoose from 'mongoose';
+import { Pool } from 'pg';
 import { env } from './env';
+
+export const pool = new Pool({ connectionString: env.DATABASE_URL });
 
 export const connectDB = async (): Promise<void> => {
   try {
-    await mongoose.connect(env.MONGO_URI);
-    console.log('✅ MongoDB connected');
+    await pool.query('SELECT 1');
+    console.log('✅ PostgreSQL connected');
   } catch (error) {
-    console.error('❌ MongoDB connection failed', error);
+    console.error('❌ PostgreSQL connection failed', error);
     process.exit(1);
   }
 };

@@ -68,3 +68,17 @@ CREATE TABLE IF NOT EXISTS task_activities (
   message TEXT NOT NULL,
   created_at TIMESTAMPTZ NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS api_tokens (
+  id VARCHAR(24) PRIMARY KEY,
+  user_id VARCHAR(24) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  label TEXT NOT NULL,
+  token_hash TEXT NOT NULL UNIQUE,
+  expires_at TIMESTAMPTZ,
+  revoked_at TIMESTAMPTZ,
+  last_used_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS api_tokens_active_user_idx
+  ON api_tokens (user_id) WHERE revoked_at IS NULL;

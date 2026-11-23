@@ -8,7 +8,7 @@ export interface AuthRequest extends Request {
   user?: AuthenticatedActor;
 }
 
-export const authenticate = (
+export const authenticate = async (
   req: AuthRequest,
   res: Response,
   next: NextFunction
@@ -20,7 +20,7 @@ export const authenticate = (
   }
 
   try {
-    req.user = getActorFromAuthorizationHeader(authHeader);
+    req.user = await getActorFromAuthorizationHeader(authHeader);
     next();
   } catch {
     return res.status(401).json({ message: 'Invalid token' });

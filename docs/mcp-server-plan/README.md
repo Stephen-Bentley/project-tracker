@@ -1,4 +1,10 @@
-# Cross-client MCP server plan
+# Cross-client MCP server plan (implemented)
+
+> **Historical planning record:** The MCP server, task tools, PostgreSQL-backed
+> credential storage, dedicated automation account, and revocable credentials
+> are implemented. Use [the current MCP guide](../mcp.md) for setup and
+> operations. The remainder of this file records the original MongoDB-era plan
+> and is not current implementation documentation.
 
 ## Purpose
 

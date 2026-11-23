@@ -1,8 +1,6 @@
 import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth.middleware';
-import Task, { TaskStatus } from '../models/Task';
-import Project from '../models/Project';
-import { TaskService } from '../services/task.service';
+import { TaskService, TaskStatus } from '../services/task.service';
 import { validate } from '../middleware/validate.middleware';
 import {
   createTaskSchema,
@@ -27,14 +25,10 @@ export const getTasksByProject = async (req: AuthRequest, res: Response) => {
     ? req.params.projectId[0]
     : req.params.projectId;
 
-  const project = await Project.findById(projectId);
-  if (!project) return res.status(404).json({ message: 'Project not found' });
-
-  if (!project.members.some((id) => id.toString() === req.user!.userId)) {
-    return res.status(403).json({ message: 'Not a project member' });
-  }
-
-  const tasks = await TaskService.getTasksByProject(projectId);
+  const tasks = await TaskService.getTasksByProject(
+    projectId,
+    req.user!.userId
+  );
   res.json(tasks);
 };
 
@@ -42,24 +36,6 @@ export const updateTask = async (req: AuthRequest, res: Response) => {
   const taskId = Array.isArray(req.params.taskId)
     ? req.params.taskId[0]
     : req.params.taskId;
-  const project = await Project.findById(
-    req.body.project || (await Task.findById(taskId))?.project
-  );
-
-  // Note: To properly handle project check without fetching task twice, we might need to fetch task first in service or a specialized method.
-  // For now, I'll keep it simple.
-
-  const task = await Task.findById(taskId);
-  if (!task) return res.status(404).json({ message: 'Task not found' });
-
-  const projectData = await Project.findById(task.project);
-  if (!projectData)
-    return res.status(404).json({ message: 'Project not found' });
-
-  if (!projectData.members.some((id) => id.toString() === req.user!.userId)) {
-    return res.status(403).json({ message: 'Not a project member' });
-  }
-
   const updatedTask = await TaskService.updateTask(
     taskId,
     req.body,
@@ -72,16 +48,6 @@ export const addTaskComment = async (req: AuthRequest, res: Response) => {
   const taskId = Array.isArray(req.params.taskId)
     ? req.params.taskId[0]
     : req.params.taskId;
-  const task = await Task.findById(taskId);
-  if (!task) return res.status(404).json({ message: 'Task not found' });
-
-  const project = await Project.findById(task.project);
-  if (!project) return res.status(404).json({ message: 'Project not found' });
-
-  if (!project.members.some((id) => id.toString() === req.user!.userId)) {
-    return res.status(403).json({ message: 'Not a project member' });
-  }
-
   const updatedTask = await TaskService.addComment(
     taskId,
     req.body.body,

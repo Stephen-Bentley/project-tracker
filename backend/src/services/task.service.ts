@@ -1,7 +1,92 @@
-import Task, { TaskStatus } from '../models/Task';
-import Project from '../models/Project';
-import mongoose from 'mongoose';
+import { pool } from '../config/db';
+import {
+  assertProjectMember,
+  domainError,
+  getProject,
+  newId,
+  TaskStatus,
+  userShape,
+} from './postgres';
 
+const labels: Record<TaskStatus, string> = {
+  todo: 'To do',
+  in_progress: 'In progress',
+  code_review: 'Code review',
+  completed: 'Completed',
+  done: 'Code review',
+};
+const taskRow = async (id: string) => {
+  const result = await pool.query(
+    `SELECT t.*, row_to_json(a.*) AS assigned_user, row_to_json(c.*) AS creator_user
+    FROM tasks t LEFT JOIN users a ON a.id=t.assigned_to JOIN users c ON c.id=t.created_by WHERE t.id=$1`,
+    [id]
+  );
+  const row: any = result.rows[0];
+  if (!row) return undefined;
+  const [comments, activities, images] = await Promise.all([
+    pool.query(
+      `SELECT tc.id, tc.body, tc.created_at, row_to_json(u.*) AS author FROM task_comments tc JOIN users u ON u.id=tc.author_id WHERE tc.task_id=$1 ORDER BY tc.created_at`,
+      [id]
+    ),
+    pool.query(
+      `SELECT ta.id, ta.type, ta.message, ta.created_at, row_to_json(u.*) AS actor FROM task_activities ta JOIN users u ON u.id=ta.actor_id WHERE ta.task_id=$1 ORDER BY ta.created_at`,
+      [id]
+    ),
+    pool.query(
+      'SELECT id, filename, content_type, uploaded_at FROM task_images WHERE task_id=$1 ORDER BY uploaded_at',
+      [id]
+    ),
+  ]);
+  return {
+    _id: row.id,
+    title: row.title,
+    description: row.description,
+    project: row.project_id,
+    assignedTo: row.assigned_user ? userShape(row.assigned_user) : null,
+    createdBy: userShape(row.creator_user),
+    status: row.status,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    images: images.rows.map((image: any) => ({
+      _id: image.id,
+      filename: image.filename,
+      contentType: image.content_type,
+      uploadedAt: image.uploaded_at,
+    })),
+    comments: comments.rows.map((comment: any) => ({
+      _id: comment.id,
+      body: comment.body,
+      createdAt: comment.created_at,
+      author: userShape(comment.author),
+    })),
+    activities: activities.rows.map((activity: any) => ({
+      _id: activity.id,
+      type: activity.type,
+      message: activity.message,
+      createdAt: activity.created_at,
+      actor: userShape(activity.actor),
+    })),
+  };
+};
+const addActivity = (
+  taskId: string,
+  actorId: string,
+  type: string,
+  message: string
+) =>
+  pool.query(
+    'INSERT INTO task_activities (id, task_id, actor_id, type, message, created_at) VALUES ($1,$2,$3,$4,$5,NOW())',
+    [newId(), taskId, actorId, type, message]
+  );
+const getExistingTask = async (taskId: string) => {
+  const task = await taskRow(taskId);
+  if (!task) throw domainError('Task not found', 404);
+  return task;
+};
+const assertTaskMember = async (task: any, actorId: string) =>
+  assertProjectMember(task.project, actorId);
+
+export { TaskStatus };
 export class TaskService {
   static async createTask(
     title: string,
@@ -11,323 +96,175 @@ export class TaskService {
     status: TaskStatus,
     creatorId: string
   ) {
-    const project = await Project.findById(projectId);
-    if (!project) {
-      const error = new Error('Project not found');
-      (error as any).status = 404;
-      throw error;
-    }
-
-    if (!project.members.some((id) => id.toString() === creatorId)) {
-      const error = new Error('You are not a member of this project');
-      (error as any).status = 403;
-      throw error;
-    }
-
+    if (!(await getProject(projectId)))
+      throw domainError('Project not found', 404);
+    await assertProjectMember(projectId, creatorId);
     if (
       assignedTo &&
-      !project.members.some((id) => id.toString() === assignedTo)
-    ) {
-      const error = new Error('Target user is not a member of this project');
-      (error as any).status = 403;
-      throw error;
-    }
-
-    const task = await Task.create({
-      title,
-      description,
-      project: project._id,
-      assignedTo: assignedTo ? new mongoose.Types.ObjectId(assignedTo) : null,
-      status: status,
-      createdBy: creatorId,
-      activities: [
-        {
-          type: 'created',
-          message: 'Task created',
-          actor: new mongoose.Types.ObjectId(creatorId),
-          createdAt: new Date(),
-        },
-      ],
-    });
-
+      !(
+        await pool.query(
+          'SELECT 1 FROM project_members WHERE project_id=$1 AND user_id=$2',
+          [projectId, assignedTo]
+        )
+      ).rowCount
+    )
+      throw domainError('Target user is not a member of this project', 403);
+    const id = newId();
+    await pool.query(
+      'INSERT INTO tasks (id,title,description,project_id,assigned_to,status,created_by,created_at,updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7,NOW(),NOW())',
+      [
+        id,
+        title.trim(),
+        description?.trim() || null,
+        projectId,
+        assignedTo,
+        status,
+        creatorId,
+      ]
+    );
+    await addActivity(id, creatorId, 'created', 'Task created');
+    return getExistingTask(id);
+  }
+  static async getTasksByProject(projectId: string, actorId?: string) {
+    if (!(await getProject(projectId)))
+      throw domainError('Project not found', 404);
+    if (actorId) await assertProjectMember(projectId, actorId);
+    const result = await pool.query(
+      'SELECT id FROM tasks WHERE project_id=$1 ORDER BY updated_at DESC',
+      [projectId]
+    );
+    return Promise.all(result.rows.map((row: any) => getExistingTask(row.id)));
+  }
+  static async getTask(taskId: string) {
+    return getExistingTask(taskId);
+  }
+  static async assertMemberForTask(taskId: string, actorId: string) {
+    const task = await getExistingTask(taskId);
+    await assertTaskMember(task, actorId);
     return task;
   }
-
-  static async getTasksByProject(projectId: string) {
-    const project = await Project.findById(projectId);
-    if (!project) {
-      const error = new Error('Project not found');
-      (error as any).status = 404;
-      throw error;
-    }
-
-    // Check permission (caller must be a member)
-    // We'll handle permission checks in the controller or by passing member check to service
-    // To keep it simple, I'll do the check in the controller for now or a helper
-    return await Task.find({ project: project._id })
-      .populate('assignedTo', 'name email avatarUrl')
-      .populate('createdBy', 'name email')
-      .populate('comments.author', 'name email avatarUrl')
-      .populate('activities.actor', 'name email avatarUrl');
-  }
-
   static async updateTask(taskId: string, updates: any, actorId: string) {
-    const task = await Task.findById(taskId);
-    if (!task) {
-      const error = new Error('Task not found');
-      (error as any).status = 404;
-      throw error;
-    }
-
-    const project = await Project.findById(task.project);
-    if (!project) {
-      const error = new Error('Project not found');
-      (error as any).status = 404;
-      throw error;
-    }
-
-    const activities: {
-      type: string;
-      message: string;
-      actor: mongoose.Types.ObjectId;
-      createdAt: Date;
-    }[] = [];
-    const statusLabels: Record<string, string> = {
-      todo: 'To do',
-      in_progress: 'In progress',
-      code_review: 'Code review',
-      completed: 'Completed',
-      done: 'Code review',
-    };
-
-    // Apply updates
-    if (updates.title !== undefined) task.title = updates.title;
-    if (updates.description !== undefined)
-      task.description = updates.description;
+    const task = await this.assertMemberForTask(taskId, actorId);
+    const nextStatus = updates.status ?? task.status;
     if (
-      updates.status &&
-      ['todo', 'in_progress', 'code_review', 'completed', 'done'].includes(
-        updates.status
-      )
-    ) {
-      if (task.status !== updates.status) {
-        activities.push({
-          type: 'status_changed',
-          message: `Status changed from ${statusLabels[task.status]} to ${statusLabels[updates.status]}`,
-          actor: new mongoose.Types.ObjectId(actorId),
-          createdAt: new Date(),
-        });
-      }
-      task.status = updates.status;
-    }
-    if (updates.title !== undefined || updates.description !== undefined) {
-      activities.push({
-        type: 'details_updated',
-        message: 'Task details updated',
-        actor: new mongoose.Types.ObjectId(actorId),
-        createdAt: new Date(),
-      });
-    }
-    if (updates.assignedTo !== undefined) {
-      const previousAssignee = task.assignedTo?.toString() || null;
-      const nextAssignee = updates.assignedTo || null;
-      if (updates.assignedTo === null || updates.assignedTo === '') {
-        task.assignedTo = null;
-      } else {
-        if (
-          !project.members.some((id) => id.toString() === updates.assignedTo)
-        ) {
-          const error = new Error(
-            'Target user is not a member of this project'
-          );
-          (error as any).status = 403;
-          throw error;
-        }
-        task.assignedTo = new mongoose.Types.ObjectId(updates.assignedTo);
-      }
-      if (previousAssignee !== nextAssignee) {
-        activities.push({
-          type: 'assigned',
-          message: nextAssignee ? 'Task assignee changed' : 'Task unassigned',
-          actor: new mongoose.Types.ObjectId(actorId),
-          createdAt: new Date(),
-        });
-      }
-    }
-
-    if (!task.activities) task.activities = [];
-    task.activities.push(...activities);
-
-    await task.save();
-    return task;
+      updates.assignedTo !== undefined &&
+      updates.assignedTo &&
+      !(
+        await pool.query(
+          'SELECT 1 FROM project_members WHERE project_id=$1 AND user_id=$2',
+          [task.project, updates.assignedTo]
+        )
+      ).rowCount
+    )
+      throw domainError('Target user is not a member of this project', 403);
+    await pool.query(
+      'UPDATE tasks SET title=$2, description=$3, assigned_to=$4, status=$5, updated_at=NOW() WHERE id=$1',
+      [
+        taskId,
+        updates.title === undefined ? task.title : updates.title.trim(),
+        updates.description === undefined
+          ? task.description
+          : updates.description?.trim() || null,
+        updates.assignedTo === undefined
+          ? task.assignedTo?._id || null
+          : updates.assignedTo || null,
+        nextStatus,
+      ]
+    );
+    if (nextStatus !== task.status)
+      await addActivity(
+        taskId,
+        actorId,
+        'status_changed',
+        `Status changed from ${labels[task.status as TaskStatus]} to ${labels[nextStatus as TaskStatus]}`
+      );
+    if (updates.title !== undefined || updates.description !== undefined)
+      await addActivity(
+        taskId,
+        actorId,
+        'details_updated',
+        'Task details updated'
+      );
+    if (
+      updates.assignedTo !== undefined &&
+      (task.assignedTo?._id || null) !== (updates.assignedTo || null)
+    )
+      await addActivity(
+        taskId,
+        actorId,
+        'assigned',
+        updates.assignedTo ? 'Task assignee changed' : 'Task unassigned'
+      );
+    return getExistingTask(taskId);
   }
-
   static async uploadTaskImages(
     taskId: string,
     images: any[],
     actorId: string
   ) {
-    const task = await Task.findById(taskId).select('+images.data');
-    if (!task) {
-      const error = new Error('Task not found');
-      (error as any).status = 404;
-      throw error;
-    }
-
-    const project = await Project.findById(task.project);
-    if (!project || !project.members.some((id) => id.toString() === actorId)) {
-      const error = new Error('Not a project member');
-      (error as any).status = 403;
-      throw error;
-    }
-
-    if (task.images.length + images.length > 3) {
-      const error = new Error('A task can have up to three images');
-      (error as any).status = 400;
-      throw error;
-    }
-
-    task.images.push(
-      ...images.map((img) => ({
-        filename: img.originalname,
-        contentType: img.mimetype,
-        data: img.buffer,
-        uploadedAt: new Date(),
-      }))
+    const task = await this.assertMemberForTask(taskId, actorId);
+    if (task.images.length + images.length > 3)
+      throw domainError('A task can have up to three images');
+    for (const image of images)
+      await pool.query(
+        'INSERT INTO task_images (id,task_id,filename,content_type,data,uploaded_at) VALUES ($1,$2,$3,$4,$5,NOW())',
+        [newId(), taskId, image.originalname, image.mimetype, image.buffer]
+      );
+    await addActivity(
+      taskId,
+      actorId,
+      'images_added',
+      `${images.length} image${images.length === 1 ? '' : 's'} added`
     );
-
-    if (!task.activities) task.activities = [];
-    task.activities.push({
-      type: 'images_added',
-      message: `${images.length} image${images.length === 1 ? '' : 's'} added`,
-      actor: new mongoose.Types.ObjectId(actorId),
-      createdAt: new Date(),
-    });
-
-    await task.save();
-    return task;
+    return getExistingTask(taskId);
   }
-
   static async getTaskImage(taskId: string, imageId: string, actorId: string) {
-    const task = await Task.findById(taskId).select('+images.data');
-    if (!task) {
-      const error = new Error('Task not found');
-      (error as any).status = 404;
-      throw error;
-    }
-
-    const project = await Project.findById(task.project);
-    if (!project || !project.members.some((id) => id.toString() === actorId)) {
-      const error = new Error('Not a project member');
-      (error as any).status = 403;
-      throw error;
-    }
-
-    const image = task.images.find(
-      (candidate) => candidate._id?.toString() === imageId
+    await this.assertMemberForTask(taskId, actorId);
+    const result = await pool.query(
+      'SELECT data, content_type FROM task_images WHERE id=$1 AND task_id=$2',
+      [imageId, taskId]
     );
-    if (!image) {
-      const error = new Error('Image not found');
-      (error as any).status = 404;
-      throw error;
-    }
-
-    return image;
+    if (!result.rows[0]) throw domainError('Image not found', 404);
+    return {
+      data: result.rows[0].data,
+      contentType: result.rows[0].content_type,
+    };
   }
-
   static async deleteTask(taskId: string, actorId: string) {
-    const task = await Task.findById(taskId);
-    if (!task) {
-      const error = new Error('Task not found');
-      (error as any).status = 404;
-      throw error;
-    }
-
-    const project = await Project.findById(task.project);
-    if (!project || !project.members.some((id) => id.toString() === actorId)) {
-      const error = new Error('Not authorized to delete this task');
-      (error as any).status = 403;
-      throw error;
-    }
-
-    await task.deleteOne();
+    await this.assertMemberForTask(taskId, actorId);
+    await pool.query('DELETE FROM tasks WHERE id=$1', [taskId]);
     return { message: 'Task deleted' };
   }
-
   static async assignUserToTask(
     taskId: string,
     userId: string | null,
     actorId: string
   ) {
-    const task = await Task.findById(taskId);
-    if (!task) {
-      const error = new Error('Task not found');
-      (error as any).status = 404;
-      throw error;
-    }
-
-    const project = await Project.findById(task.project);
-    if (!project || !project.members.some((id) => id.toString() === actorId)) {
-      const error = new Error('Not authorized to assign users to this task');
-      (error as any).status = 403;
-      throw error;
-    }
-
-    const previousAssignee = task.assignedTo?.toString() || null;
-    if (userId) {
-      if (!project.members.some((id) => id.toString() === userId)) {
-        const error = new Error('Target user is not a member of this project');
-        (error as any).status = 403;
-        throw error;
-      }
-      task.assignedTo = new mongoose.Types.ObjectId(userId);
-    } else {
-      task.assignedTo = null;
-    }
-
-    if (previousAssignee !== userId) {
-      if (!task.activities) task.activities = [];
-      task.activities.push({
-        type: 'assigned',
-        message: userId ? 'Task assignee changed' : 'Task unassigned',
-        actor: new mongoose.Types.ObjectId(actorId),
-        createdAt: new Date(),
-      });
-    }
-
-    await task.save();
-
+    const task = await this.assertMemberForTask(taskId, actorId);
+    if (
+      userId &&
+      !(
+        await pool.query(
+          'SELECT 1 FROM project_members WHERE project_id=$1 AND user_id=$2',
+          [task.project, userId]
+        )
+      ).rowCount
+    )
+      throw domainError('Target user is not a member of this project', 403);
+    await this.updateTask(taskId, { assignedTo: userId }, actorId);
     return {
       message: userId ? 'User assigned to task' : 'User unassigned from task',
-      taskId: task._id,
-      assignedTo: task.assignedTo,
+      taskId,
+      assignedTo: userId,
     };
   }
-
   static async addComment(taskId: string, body: string, authorId: string) {
-    const task = await Task.findById(taskId);
-    if (!task) {
-      const error = new Error('Task not found');
-      (error as any).status = 404;
-      throw error;
-    }
-
-    if (!task.comments) task.comments = [];
-    if (!task.activities) task.activities = [];
-
-    task.comments.push({
-      author: new mongoose.Types.ObjectId(authorId),
-      body: body.trim(),
-      createdAt: new Date(),
-    });
-    task.activities.push({
-      type: 'comment_added',
-      message: 'Comment added',
-      actor: new mongoose.Types.ObjectId(authorId),
-      createdAt: new Date(),
-    });
-
-    await task.save();
-    return task;
+    await this.assertMemberForTask(taskId, authorId);
+    await pool.query(
+      'INSERT INTO task_comments (id,task_id,author_id,body,created_at) VALUES ($1,$2,$3,$4,NOW())',
+      [newId(), taskId, authorId, body.trim()]
+    );
+    await addActivity(taskId, authorId, 'comment_added', 'Comment added');
+    return getExistingTask(taskId);
   }
 }

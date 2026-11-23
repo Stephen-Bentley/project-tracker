@@ -1,8 +1,5 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import mongoose from 'mongoose';
 import { z } from 'zod';
-import Project from '../models/Project';
-import Task from '../models/Task';
 import { ProjectService } from '../services/project.service';
 import { TaskService } from '../services/task.service';
 import { AuthenticatedActor } from '../utils/authentication';
@@ -10,8 +7,8 @@ import { AuthenticatedActor } from '../utils/authentication';
 const objectIdSchema = z
   .string()
   .refine(
-    mongoose.Types.ObjectId.isValid,
-    'Must be a valid MongoDB object ID.'
+    (value) => /^[a-f0-9]{24}$/i.test(value),
+    'Must be a valid resource ID.'
   );
 const taskStatusSchema = z.enum([
   'todo',
@@ -73,45 +70,23 @@ const toolFailure = (message: string) => ({
   content: [{ type: 'text' as const, text: message }],
 });
 
-const assertProjectMember = async (
-  projectId: string,
-  actor: AuthenticatedActor
-) => {
-  const project = await Project.findById(projectId);
-  if (
-    !project ||
-    !project.members.some((member) => member.toString() === actor.userId)
-  ) {
-    throw new McpNotFoundError();
-  }
-  return project;
-};
-
 const listProjectTasks = async (
   projectId: string,
   actor: AuthenticatedActor
 ) => {
-  const project = await assertProjectMember(projectId, actor);
-  return Task.find({ project: project._id })
-    .populate('assignedTo', 'name email avatarUrl')
-    .populate('createdBy', 'name email');
+  return TaskService.getTasksByProject(projectId, actor.userId).catch(() => {
+    throw new McpNotFoundError();
+  });
 };
 
 const getTask = async (taskId: string, actor: AuthenticatedActor) => {
-  const task = await Task.findById(taskId)
-    .populate('assignedTo', 'name email avatarUrl')
-    .populate('createdBy', 'name email');
-
-  if (!task) throw new McpNotFoundError();
-  await assertProjectMember(task.project.toString(), actor);
-  return task;
+  return TaskService.assertMemberForTask(taskId, actor.userId).catch(() => {
+    throw new McpNotFoundError();
+  });
 };
 
 const getTaskForMember = async (taskId: string, actor: AuthenticatedActor) => {
-  const task = await Task.findById(taskId);
-  if (!task) throw new McpNotFoundError();
-  await assertProjectMember(task.project.toString(), actor);
-  return task;
+  return getTask(taskId, actor);
 };
 
 const safeTool = async <T>(operation: () => Promise<T>) => {
@@ -218,7 +193,7 @@ export const createMcpServer = (actor: AuthenticatedActor) => {
           status || 'todo',
           actor.userId
         );
-        const task = await getTask(created._id.toString(), actor);
+        const task = await getTask(created._id, actor);
         return { task: serializeTask(task) };
       })
   );

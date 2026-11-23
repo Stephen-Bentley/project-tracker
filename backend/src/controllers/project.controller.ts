@@ -10,11 +10,12 @@ import {
 import { validate } from '../middleware/validate.middleware';
 
 export const createProject = async (req: AuthRequest, res: Response) => {
-  const { name, description } = req.body;
+  const { name, description, addAutomationMember } = req.body;
   const project = await ProjectService.createProject(
     name,
     description,
-    req.user!.userId
+    req.user!.userId,
+    addAutomationMember
   );
   res.status(201).json(project);
 };

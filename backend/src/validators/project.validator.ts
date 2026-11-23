@@ -4,6 +4,7 @@ export const createProjectSchema = z.object({
   body: z.object({
     name: z.string().min(1, 'Project name is required'),
     description: z.string().optional(),
+    addAutomationMember: z.boolean().optional(),
   }),
 });
 

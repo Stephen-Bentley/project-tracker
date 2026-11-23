@@ -1,37 +1,45 @@
 # Project Tracker MCP server
 
-Project Tracker provides a read-only MCP server for compatible clients. It has
-four tools: `list_my_projects`, `get_project`, `list_project_tasks`, and
-`get_task`. Every request is authorized as the Project Tracker user represented
-by an existing JWT; the server does not provide arbitrary database access or
-write operations.
+Project Tracker exposes project-scoped MCP tools to compatible clients such as Codex and Claude. The server is client-neutral: each request is authorized as a Project Tracker user and can access only projects that user belongs to.
 
-## HTTP
+## Dedicated automation account
 
-Start the backend normally and connect an MCP client to:
+Use a dedicated `MCP Automation` user rather than a personal admin account. Provision it after `DATABASE_URL` has been configured:
+
+```powershell
+npm run mcp-token:provision --prefix backend
+```
+
+The command creates the account if necessary, adds it to all existing projects, creates a new opaque `mcp_...` credential, and writes that credential only to an ignored local file named `.mcp-automation-token.local`. The command output contains the token ID but never the token itself. Store the token in the client configuration, then move or securely delete that local file.
+
+New projects add the automation account automatically when it exists. Send `addAutomationMember: false` while creating a project to opt out.
+
+## Credentials and revocation
+
+Use the opaque credential from the local token file as the HTTP bearer token. Only its SHA-256 hash is stored in PostgreSQL. The server records when it was last used and rejects revoked credentials immediately.
+
+Create a replacement credential by running the provision command again. Revoke an old token by ID:
+
+```powershell
+npm run mcp-token:revoke --prefix backend -- <token-id>
+```
+
+Rotate a credential before sharing it widely, after a client is decommissioned, or whenever its secrecy is uncertain. Do not put the token in source control, ticket descriptions, command history, or logs.
+
+## HTTP and local stdio
+
+Start the backend and connect to:
 
 ```text
 http://localhost:5000/mcp
 ```
 
-Send the normal Project Tracker access JWT as a bearer token in the
-`Authorization` header. The token expires after 15 minutes; obtain a new token
-by signing in again when the client reports an authorization failure. Production
-deployments must use HTTPS and preserve the `Authorization` header.
+Send either a normal Project Tracker JWT or a revocable `mcp_...` credential as a bearer token. Production deployments must use HTTPS and preserve the `Authorization` header.
 
-## Local stdio
+For local stdio clients, set the token in the process environment and run:
 
-Set a valid access token in your shell environment, then run:
-
-```text
+```powershell
 npm run mcp:stdio --prefix backend
 ```
 
-The stdio process writes only MCP protocol messages to standard output. Do not
-put the token in a committed client configuration file.
-
-## Client configuration
-
-Configure Codex or Claude Code with either the HTTP endpoint and its bearer
-token support, or the local stdio command above. The MCP protocol implementation
-is client-neutral; each client still requires its own connection configuration.
+The stdio process writes only MCP protocol messages to standard output.

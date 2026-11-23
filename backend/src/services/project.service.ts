@@ -1,164 +1,149 @@
-import Project from '../models/Project';
-import User from '../models/User';
-import mongoose from 'mongoose';
+import { pool } from '../config/db';
+import { env } from '../config/env';
+import { domainError, getProject, isProjectMember, newId } from './postgres';
 
 export class ProjectService {
   static async createProject(
     name: string,
     description: string,
-    userId: string
+    userId: string,
+    addAutomationMember = true
   ) {
-    const project = await Project.create({
-      name,
-      description,
-      createdBy: userId,
-      members: [userId],
-    });
-    return project;
+    const id = newId();
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query(
+        'INSERT INTO projects (id, name, description, created_by, created_at, updated_at) VALUES ($1, $2, $3, $4, NOW(), NOW())',
+        [id, name.trim(), description?.trim() || null, userId]
+      );
+      await client.query(
+        'INSERT INTO project_members (project_id, user_id) VALUES ($1, $2)',
+        [id, userId]
+      );
+      if (addAutomationMember) {
+        const automationUser = await client.query(
+          'SELECT id FROM users WHERE email = $1',
+          [env.MCP_AUTOMATION_EMAIL]
+        );
+        if (automationUser.rows[0] && automationUser.rows[0].id !== userId) {
+          await client.query(
+            'INSERT INTO project_members (project_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+            [id, automationUser.rows[0].id]
+          );
+        }
+      }
+      await client.query('COMMIT');
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+    return getProject(id);
   }
-
   static async getProjectsByMember(userId: string) {
-    return await Project.find({
-      members: userId,
-    }).populate('members', 'name email role avatarUrl');
+    const result = await pool.query(
+      'SELECT project_id FROM project_members WHERE user_id = $1 ORDER BY project_id',
+      [userId]
+    );
+    return Promise.all(
+      result.rows.map((row: any) => getProject(row.project_id))
+    );
   }
-
   static async addMember(projectId: string, userId: string) {
-    const project = await Project.findById(projectId);
-    if (!project) {
-      const error = new Error('Project not found');
-      (error as any).status = 404;
+    if (!(await getProject(projectId)))
+      throw domainError('Project not found', 404);
+    if (
+      !(await pool.query('SELECT 1 FROM users WHERE id = $1', [userId]))
+        .rowCount
+    )
+      throw domainError('User not found', 404);
+    try {
+      await pool.query(
+        'INSERT INTO project_members (project_id, user_id) VALUES ($1, $2)',
+        [projectId, userId]
+      );
+    } catch (error: any) {
+      if (error?.code === '23505')
+        throw domainError('User already in project', 409);
       throw error;
     }
-
-    const user = await User.findById(userId);
-    if (!user) {
-      const error = new Error('User not found');
-      (error as any).status = 404;
-      throw error;
-    }
-
-    if (project.members.includes(user._id)) {
-      const error = new Error('User already in project');
-      (error as any).status = 409;
-      throw error;
-    }
-
-    project.members.push(user._id);
-    await project.save();
-
-    return {
-      message: 'User added to project',
-      projectId: project._id,
-      userId: user._id,
-    };
+    return { message: 'User added to project', projectId, userId };
   }
-
   static async removeMember(
     projectId: string,
     userId: string,
-    currentUserId: string
+    _currentUserId: string
   ) {
-    const project = await Project.findById(projectId);
-    if (!project) {
-      const error = new Error('Project not found');
-      (error as any).status = 404;
-      throw error;
-    }
-
-    if (project.createdBy.toString() === userId) {
-      const error = new Error('Cannot remove project creator');
-      (error as any).status = 400;
-      throw error;
-    }
-
-    const memberIndex = project.members.findIndex(
-      (id) => id.toString() === userId
-    );
-
-    if (memberIndex === -1) {
-      const error = new Error('User not in project');
-      (error as any).status = 404;
-      throw error;
-    }
-
-    project.members.splice(memberIndex, 1);
-    await project.save();
-
+    const project = await getProject(projectId);
+    if (!project) throw domainError('Project not found', 404);
+    if (project.createdBy._id === userId)
+      throw domainError('Cannot remove project creator');
+    if (
+      !(
+        await pool.query(
+          'DELETE FROM project_members WHERE project_id = $1 AND user_id = $2',
+          [projectId, userId]
+        )
+      ).rowCount
+    )
+      throw domainError('User not in project', 404);
     return { message: 'User removed from project' };
   }
-
   static async getProjectById(projectId: string, userId: string) {
-    const project = await Project.findById(projectId).populate(
-      'members',
-      'name email role avatarUrl'
-    );
-
-    if (!project) {
-      const error = new Error('Project not found');
-      (error as any).status = 404;
-      throw error;
-    }
-
-    const isMember = project.members.some(
-      (member) => member._id.toString() === userId
-    );
-
-    if (!isMember) {
-      const error = new Error('Not a project member');
-      (error as any).status = 403;
-      throw error;
-    }
-
+    const project = await getProject(projectId);
+    if (!project) throw domainError('Project not found', 404);
+    if (!(await isProjectMember(projectId, userId)))
+      throw domainError('Not a project member', 403);
     return project;
   }
-
   static async updateMembers(
     projectId: string,
     members: string[],
     currentUserId: string
   ) {
-    const project = await Project.findById(projectId);
-    if (!project) {
-      const error = new Error('Project not found');
-      (error as any).status = 404;
+    const project = await getProject(projectId);
+    if (!project) throw domainError('Project not found', 404);
+    if (project.createdBy._id !== currentUserId)
+      throw domainError('Only project admin can update members', 403);
+    const wanted = [...new Set([...members, project.createdBy._id])];
+    if (
+      (
+        await pool.query('SELECT id FROM users WHERE id = ANY($1::varchar[])', [
+          wanted,
+        ])
+      ).rows.length !== wanted.length
+    )
+      throw domainError('One or more users were not found');
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query('DELETE FROM project_members WHERE project_id = $1', [
+        projectId,
+      ]);
+      for (const userId of wanted)
+        await client.query(
+          'INSERT INTO project_members (project_id, user_id) VALUES ($1, $2)',
+          [projectId, userId]
+        );
+      await client.query(
+        'UPDATE projects SET updated_at = NOW() WHERE id = $1',
+        [projectId]
+      );
+      await client.query('COMMIT');
+    } catch (error) {
+      await client.query('ROLLBACK');
       throw error;
+    } finally {
+      client.release();
     }
-
-    if (project.createdBy.toString() !== currentUserId) {
-      const error = new Error('Only project admin can update members');
-      (error as any).status = 403;
-      throw error;
-    }
-
-    // Validate all user IDs
-    for (const userId of members) {
-      if (!mongoose.Types.ObjectId.isValid(userId)) {
-        const error = new Error(`Invalid user ID: ${userId}`);
-        (error as any).status = 400;
-        throw error;
-      }
-    }
-
-    const updatedMembers = Array.from(
-      new Set([
-        ...members.map((m) => new mongoose.Types.ObjectId(m)),
-        project.createdBy,
-      ])
-    );
-
-    project.members = updatedMembers;
-    await project.save();
-
-    return await Project.findById(projectId).populate(
-      'members',
-      'name email role avatarUrl'
-    );
+    return getProject(projectId);
   }
-
   static async getAllProjects() {
-    return await Project.find()
-      .populate('members', 'name email role avatarUrl')
-      .populate('createdBy', 'name email');
+    const result = await pool.query(
+      'SELECT id FROM projects ORDER BY created_at DESC'
+    );
+    return Promise.all(result.rows.map((row: any) => getProject(row.id)));
   }
 }

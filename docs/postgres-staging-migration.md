@@ -1,8 +1,9 @@
 # PostgreSQL staging migration
 
 This migration copies Project Tracker data from MongoDB to a separate local
-PostgreSQL staging database. It never deletes or updates MongoDB. It is not an
-application cutover; the running application continues to use MongoDB.
+PostgreSQL staging database. It never deletes or updates MongoDB. The backend
+now uses PostgreSQL through `DATABASE_URL`; MongoDB remains the rollback source
+until the cutover has been accepted.
 
 ## Start PostgreSQL
 
@@ -36,3 +37,15 @@ of MongoDB and never changes the MongoDB source.
 
 MongoDB remains the rollback source. Do not point `POSTGRES_MIGRATION_URL` at
 a production database.
+
+## Run the application on PostgreSQL
+
+Set `DATABASE_URL` in `backend/.env` to the PostgreSQL database you intend to
+use, then run the normal development command. For the local staging container,
+the URL uses port `5433` and the database/user values from
+`.env.postgres-staging`. Do not remove the MongoDB settings until the
+PostgreSQL-backed application has been accepted and backed up.
+
+The migration may be run again before cutover. It replaces only the guarded
+staging tables with a fresh MongoDB snapshot, so it carries newly created
+projects and tasks across without changing MongoDB.
