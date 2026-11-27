@@ -8,7 +8,8 @@ export const connectDB = async (): Promise<void> => {
     await pool.query(
       `ALTER TABLE public.tasks
        ADD COLUMN IF NOT EXISTS priority TEXT CHECK (priority IN ('low', 'medium', 'high', 'urgent')),
-       ADD COLUMN IF NOT EXISTS due_date DATE`
+       ADD COLUMN IF NOT EXISTS due_date DATE,
+       ADD COLUMN IF NOT EXISTS board_position INTEGER`
     );
     console.log('✅ PostgreSQL connected');
   } catch (error) {

@@ -10,6 +10,18 @@ export const updateTaskStatus = async (taskId: string, status: string) => {
   await api.put(`/tasks/${taskId}`, { status });
 };
 
+export const moveBoardTask = async (
+  taskId: string,
+  status: TaskStatus,
+  beforeTaskId: string | null
+) => {
+  await api.put(
+    `/tasks/${taskId}/position`,
+    { status, beforeTaskId },
+    { timeout: 10000 }
+  );
+};
+
 export const createTask = async (
   projectId: string,
   title: string,
