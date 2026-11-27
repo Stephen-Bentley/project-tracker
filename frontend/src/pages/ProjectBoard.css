@@ -43,6 +43,13 @@
   margin-bottom: 24px;
 }
 
+.board-move-error {
+  color: var(--text);
+  border-left: 4px solid #dc2626;
+  margin: 0 0 16px;
+  padding: 8px 12px;
+}
+
 .board-filter {
   color: var(--text);
   display: flex;

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { avatarSource } from '../utils/avatar';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
@@ -13,7 +13,7 @@ import { User } from '../types/index';
 import {
   getTasksByProject,
   createTask,
-  updateTaskStatus,
+  moveBoardTask,
   updateTaskDetails,
   uploadTaskImages,
   addTaskComment,
@@ -53,10 +53,30 @@ const ProjectBoard: React.FC = () => {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [showCompleted, setShowCompleted] = useState(false);
   const [assigneeFilter, setAssigneeFilter] = useState('all');
+  const [movePending, setMovePending] = useState(false);
+  const [moveError, setMoveError] = useState('');
+  const moving = useRef(false);
+  const currentProject = useRef(projectId);
+  const boardElement = useRef<HTMLDivElement>(null);
+  const restoreFocus = useRef<string | null>(null);
+  currentProject.current = projectId;
+
+  useEffect(() => {
+    if (movePending || !restoreFocus.current) return;
+    if (document.activeElement === document.body) {
+      const cards =
+        boardElement.current?.querySelectorAll<HTMLElement>('[data-task-id]');
+      Array.from(cards ?? [])
+        .find((card) => card.dataset.taskId === restoreFocus.current)
+        ?.focus();
+    }
+    restoreFocus.current = null;
+  }, [movePending]);
 
   // Load tasks and project members
   useEffect(() => {
     if (!projectId) return;
+    setMoveError('');
 
     const load = async () => {
       try {
@@ -89,7 +109,7 @@ const ProjectBoard: React.FC = () => {
     try {
       await createTask(projectId, title, description, assignedTo);
       const updatedTasks = await getTasksByProject(projectId);
-      setTasks(updatedTasks);
+      setTasks(updatedTasks.map(normalizeTask));
       setShowModal(false);
     } catch {
       alert('Failed to create task');
@@ -98,7 +118,7 @@ const ProjectBoard: React.FC = () => {
 
   const onDragEnd = async (result: DropResult) => {
     const { destination, source, draggableId } = result;
-    if (!destination) return;
+    if (!destination || moving.current) return;
     if (
       destination.droppableId === source.droppableId &&
       destination.index === source.index
@@ -106,18 +126,38 @@ const ProjectBoard: React.FC = () => {
       return;
 
     const newStatus = destination.droppableId as TaskStatus;
-
-    // Optimistic UI update
-    setTasks((prev) =>
-      prev.map((task) =>
-        task._id === draggableId ? { ...task, status: newStatus } : task
-      )
+    const task = tasks.find((candidate) => candidate._id === draggableId);
+    if (!task) return;
+    const beforeMove = tasks;
+    const targetTasks = tasksByStatus(newStatus).filter(
+      (candidate) => candidate._id !== draggableId
     );
+    const beforeTaskId = targetTasks[destination.index]?._id ?? null;
+    const next = tasks.filter((candidate) => candidate._id !== draggableId);
+    const insertAt = beforeTaskId
+      ? next.findIndex((candidate) => candidate._id === beforeTaskId)
+      : next.length;
+    next.splice(insertAt, 0, { ...task, status: newStatus });
 
+    moving.current = true;
+    setMovePending(true);
+    setMoveError('');
+    setTasks(next);
     try {
-      await updateTaskStatus(draggableId, newStatus);
+      await moveBoardTask(draggableId, newStatus, beforeTaskId);
     } catch {
-      alert('Failed to update task status');
+      if (currentProject.current === projectId) {
+        setTasks(beforeMove);
+        setMoveError(
+          'Could not save the card move. Refresh the board and try again.'
+        );
+      }
+    } finally {
+      if (result.mode === 'SNAP' && currentProject.current === projectId) {
+        restoreFocus.current = draggableId;
+      }
+      moving.current = false;
+      setMovePending(false);
     }
   };
 
@@ -200,6 +240,7 @@ const ProjectBoard: React.FC = () => {
         <div className="board-actions">
           <button
             className="add-task-button"
+            disabled={movePending}
             onClick={() => setShowModal(true)}
           >
             + Add task
@@ -233,8 +274,17 @@ const ProjectBoard: React.FC = () => {
         </label>
       </div>
 
+      {moveError && (
+        <p className="board-move-error" role="alert">
+          {moveError}
+        </p>
+      )}
+
       <DragDropContext onDragEnd={onDragEnd}>
-        <div className={`board board--${visibleStatuses.length}`}>
+        <div
+          ref={boardElement}
+          className={`board board--${visibleStatuses.length}`}
+        >
           {visibleStatuses.map((status) => {
             const statusTasks = tasksByStatus(status);
             return (
@@ -256,6 +306,7 @@ const ProjectBoard: React.FC = () => {
                           key={task._id}
                           draggableId={task._id}
                           index={index}
+                          isDragDisabled={movePending}
                         >
                           {(provided) => (
                             <div
@@ -266,7 +317,10 @@ const ProjectBoard: React.FC = () => {
                                 ...provided.draggableProps.style,
                               }}
                               className="task-card"
-                              onClick={() => setSelectedTask(task)}
+                              data-task-id={task._id}
+                              onClick={() => {
+                                if (!moving.current) setSelectedTask(task);
+                              }}
                             >
                               <h4 className="task-title">{task.title}</h4>
                               {task.description && (

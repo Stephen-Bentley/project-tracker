@@ -8,6 +8,7 @@ import {
   updateTask,
   uploadTaskImages,
   addTaskComment,
+  moveBoardTask,
 } from '../controllers/task.controller';
 import { authenticate } from '../middleware/auth.middleware';
 import { taskImageUpload } from '../middleware/upload.middleware';
@@ -16,6 +17,7 @@ import {
   createTaskCommentSchema,
   createTaskSchema,
   updateTaskSchema,
+  moveBoardTaskSchema,
 } from '../validators/task.validator';
 
 const router = Router();
@@ -36,6 +38,12 @@ router.post(
   uploadTaskImages
 );
 router.put('/:taskId', authenticate, validate(updateTaskSchema), updateTask);
+router.put(
+  '/:taskId/position',
+  authenticate,
+  validate(moveBoardTaskSchema),
+  moveBoardTask
+);
 router.post(
   '/:taskId/comments',
   authenticate,

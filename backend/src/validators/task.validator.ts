@@ -54,3 +54,16 @@ export const createTaskCommentSchema = z.object({
     body: z.string().trim().min(1, 'Comment cannot be empty').max(2000),
   }),
 });
+
+export const moveBoardTaskSchema = z.object({
+  params: z.object({ taskId: z.string().regex(/^[0-9a-f]{24}$/i) }),
+  body: z
+    .object({
+      status: z.enum(['todo', 'in_progress', 'code_review', 'completed']),
+      beforeTaskId: z
+        .string()
+        .regex(/^[0-9a-f]{24}$/i)
+        .nullable(),
+    })
+    .strict(),
+});

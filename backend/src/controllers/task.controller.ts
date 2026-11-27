@@ -44,6 +44,19 @@ export const updateTask = async (req: AuthRequest, res: Response) => {
   res.json(updatedTask);
 };
 
+export const moveBoardTask = async (req: AuthRequest, res: Response) => {
+  const taskId = Array.isArray(req.params.taskId)
+    ? req.params.taskId[0]
+    : req.params.taskId;
+  await TaskService.moveBoardTask(
+    taskId,
+    req.body.status,
+    req.body.beforeTaskId,
+    req.user!.userId
+  );
+  res.sendStatus(204);
+};
+
 export const addTaskComment = async (req: AuthRequest, res: Response) => {
   const taskId = Array.isArray(req.params.taskId)
     ? req.params.taskId[0]
