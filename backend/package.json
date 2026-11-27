@@ -12,7 +12,8 @@
     "migrate:postgres:staging": "node scripts/migrate-mongo-to-postgres.cjs",
     "mcp-token:provision": "node scripts/provision-mcp-automation.cjs",
     "mcp-token:revoke": "node scripts/revoke-mcp-token.cjs",
-    "test": "jest"
+    "test": "jest",
+    "test:postgres": "node scripts/test-postgres.cjs"
   },
   "keywords": [],
   "author": "",
@@ -38,13 +39,11 @@
     "@types/express": "^5.0.6",
     "@types/jest": "^29.5.0",
     "@types/jsonwebtoken": "^9.0.10",
-    "@types/mongodb-memory-server": "^1.8.0",
     "@types/multer": "^2.2.0",
     "@types/node": "^20.0.0",
     "@types/supertest": "^6.0.2",
     "jest": "^29.7.0",
     "jest-util": "^29.7.0",
-    "mongodb-memory-server": "^11.2.0",
     "supertest": "^6.3.4",
     "ts-jest": "^29.1.0",
     "ts-node-dev": "^2.0.0",
