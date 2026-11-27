@@ -53,6 +53,7 @@ const ProjectBoard: React.FC = () => {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [showCompleted, setShowCompleted] = useState(false);
   const [assigneeFilter, setAssigneeFilter] = useState('all');
+  const [search, setSearch] = useState('');
 
   // Load tasks and project members
   useEffect(() => {
@@ -179,7 +180,15 @@ const ProjectBoard: React.FC = () => {
     ? STATUSES
     : STATUSES.filter((status) => status !== 'completed');
 
+  const query = search.trim().toLowerCase();
   const filteredTasks = tasks.filter((task) => {
+    if (
+      query &&
+      !task.title.toLowerCase().includes(query) &&
+      !task.description?.toLowerCase().includes(query)
+    ) {
+      return false;
+    }
     if (assigneeFilter === 'unassigned') return !assignedUser(task);
     if (assigneeFilter === 'all') return true;
     return assignedUser(task)?._id === assigneeFilter;
@@ -187,6 +196,10 @@ const ProjectBoard: React.FC = () => {
 
   const tasksByStatus = (status: TaskStatus) =>
     filteredTasks.filter((task) => task.status === status);
+
+  const hasNoMatches =
+    (query !== '' || assigneeFilter !== 'all') &&
+    !filteredTasks.some((task) => visibleStatuses.includes(task.status));
 
   if (loading) return <p style={{ padding: 24 }}>Loading board...</p>;
 
@@ -208,6 +221,24 @@ const ProjectBoard: React.FC = () => {
       </div>
 
       <div className="board-filters" aria-label="Board filters">
+        <div className="board-search">
+          <label className="board-filter">
+            <span>Search tickets</span>
+            <input
+              type="search"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+            />
+          </label>
+          <button
+            type="button"
+            className="clear-board-search"
+            disabled={!search}
+            onClick={() => setSearch('')}
+          >
+            Clear search
+          </button>
+        </div>
         <label className="board-filter">
           <span>Assignee</span>
           <select
@@ -232,6 +263,12 @@ const ProjectBoard: React.FC = () => {
           Show completed
         </label>
       </div>
+
+      {hasNoMatches && (
+        <p className="board-no-matches" role="status">
+          No tickets match your filters.
+        </p>
+      )}
 
       <DragDropContext onDragEnd={onDragEnd}>
         <div className={`board board--${visibleStatuses.length}`}>
