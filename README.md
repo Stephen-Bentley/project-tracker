@@ -41,4 +41,10 @@ Run the backend type check with:
 npm run build --prefix backend
 ```
 
-The existing Jest suite still contains MongoDB-era tests and must be converted to use an isolated PostgreSQL test database before it can be considered cutover coverage.
+With Docker running, execute the backend suite against PostgreSQL:
+
+```powershell
+npm run test:postgres --prefix backend
+```
+
+The runner starts a disposable PostgreSQL container on a random loopback port, loads the current schema, and stops the container when Jest exits. It generates its own database and credentials and ignores the application's configured `DATABASE_URL`.
