@@ -7,13 +7,14 @@ pipeline {
         timeout(time: 1, unit: 'HOURS')
     }
 
+    triggers { pollSCM('H/5 * * * *') }
+
     parameters {
         string(
             name: 'DEPLOY_ENV_FILE',
             defaultValue: '/var/jenkins_home/secrets/project-tracker/.env.postgres-production',
             description: 'Path to the PostgreSQL production environment file inside Jenkins.'
         )
-        booleanParam(name: 'AUTO_DEPLOY', defaultValue: false, description: 'Deploy automatically after verification.')
     }
 
     environment {
@@ -40,15 +41,6 @@ pipeline {
         stage('Build images on homeserver') {
             steps {
                 sh 'docker compose --project-name project-tracker --env-file .env.example build'
-            }
-        }
-
-        stage('Approve deployment') {
-            when {
-                expression { !params.AUTO_DEPLOY }
-            }
-            steps {
-                input message: 'Deploy Project Tracker to Docker on the homeserver?', ok: 'Deploy', submitter: 'admin'
             }
         }
 
