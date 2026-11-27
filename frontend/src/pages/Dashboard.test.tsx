@@ -58,3 +58,29 @@ test('shows personal work and filters the task queue', async () => {
     ).toBeInTheDocument();
   });
 });
+
+test('surfaces overdue tickets contributed by the project queue', async () => {
+  vi.mocked(getDashboard).mockResolvedValue({
+    ...dashboardData,
+    overdueWork: [
+      {
+        taskId: 'overdue-1',
+        projectId: 'project-1',
+        projectName: 'Payments',
+        title: 'Check expired invoice',
+        dueDate: '2026-01-15',
+      },
+    ],
+  });
+  render(
+    <MemoryRouter>
+      <Dashboard />
+    </MemoryRouter>
+  );
+  expect(
+    await screen.findByRole('heading', { name: 'Overdue work' })
+  ).toBeInTheDocument();
+  expect(
+    screen.getByRole('button', { name: /Check expired invoice/ })
+  ).toBeInTheDocument();
+});

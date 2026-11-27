@@ -8,7 +8,13 @@ import {
   DropResult,
 } from '@hello-pangea/dnd';
 
-import { Task, TaskStatus } from '../types/task';
+import {
+  Task,
+  TaskSchedule,
+  TaskStatus,
+  taskPriorityLabels,
+} from '../types/task';
+import { formatCalendarDate } from '../utils/calendarDate';
 import { User } from '../types/index';
 import {
   getTasksByProject,
@@ -82,18 +88,15 @@ const ProjectBoard: React.FC = () => {
   const handleCreateTask = async (
     title: string,
     description?: string,
-    assignedTo?: string
+    assignedTo?: string,
+    schedule?: TaskSchedule
   ) => {
     if (!projectId) return;
 
-    try {
-      await createTask(projectId, title, description, assignedTo);
-      const updatedTasks = await getTasksByProject(projectId);
-      setTasks(updatedTasks);
-      setShowModal(false);
-    } catch {
-      alert('Failed to create task');
-    }
+    await createTask(projectId, title, description, assignedTo, schedule);
+    const updatedTasks = await getTasksByProject(projectId);
+    setTasks(updatedTasks.map(normalizeTask));
+    setShowModal(false);
   };
 
   const onDragEnd = async (result: DropResult) => {
@@ -136,7 +139,8 @@ const ProjectBoard: React.FC = () => {
     title: string,
     description: string,
     assignedTo: string,
-    status: TaskStatus
+    status: TaskStatus,
+    schedule: TaskSchedule
   ) => {
     if (!selectedTask) return;
     await updateTaskDetails(
@@ -144,7 +148,8 @@ const ProjectBoard: React.FC = () => {
       title,
       description,
       assignedTo,
-      status
+      status,
+      schedule
     );
     await refreshTasks();
   };
@@ -274,6 +279,21 @@ const ProjectBoard: React.FC = () => {
                                   {task.description}
                                 </p>
                               )}
+                              {(task.priority || task.dueDate) && (
+                                <div className="task-card-schedule">
+                                  {task.priority && (
+                                    <span>
+                                      {taskPriorityLabels[task.priority]}{' '}
+                                      priority
+                                    </span>
+                                  )}
+                                  {task.dueDate && (
+                                    <time dateTime={task.dueDate}>
+                                      Due {formatCalendarDate(task.dueDate)}
+                                    </time>
+                                  )}
+                                </div>
+                              )}
 
                               <div
                                 className="task-person"
@@ -322,9 +342,7 @@ const ProjectBoard: React.FC = () => {
         <CreateTaskModal
           members={members}
           onClose={() => setShowModal(false)}
-          onCreate={async (title, description, assignedTo) => {
-            await handleCreateTask(title, description, assignedTo);
-          }}
+          onCreate={handleCreateTask}
         />
       )}
       {selectedTask && (

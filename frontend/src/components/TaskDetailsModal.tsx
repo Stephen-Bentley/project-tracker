@@ -1,8 +1,14 @@
 import React, { FormEvent, useEffect, useState } from 'react';
-import { Task, TaskStatus } from '../types/task';
+import {
+  Task,
+  TaskSchedule,
+  TaskStatus,
+  changedTaskSchedule,
+} from '../types/task';
 import { User } from '../types';
 import { apiAssetSource } from '../utils/avatar';
 import SecureImage from './SecureImage';
+import TaskScheduleFields from './TaskScheduleFields';
 
 interface Props {
   task: Task;
@@ -12,7 +18,8 @@ interface Props {
     title: string,
     description: string,
     assignedTo: string,
-    status: TaskStatus
+    status: TaskStatus,
+    schedule: TaskSchedule
   ) => Promise<void>;
   onUpload: (files: File[]) => Promise<void>;
   onComment: (body: string) => Promise<void>;
@@ -34,6 +41,10 @@ const TaskDetailsModal: React.FC<Props> = ({
       : task.assignedTo || ''
   );
   const [status, setStatus] = useState<TaskStatus>(task.status);
+  const [schedule, setSchedule] = useState<TaskSchedule>({
+    priority: task.priority,
+    dueDate: task.dueDate,
+  });
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState('');
@@ -49,6 +60,7 @@ const TaskDetailsModal: React.FC<Props> = ({
         : task.assignedTo || ''
     );
     setStatus(task.status === 'done' ? 'code_review' : task.status);
+    setSchedule({ priority: task.priority, dueDate: task.dueDate });
   }, [task]);
 
   const save = async (event: FormEvent) => {
@@ -56,7 +68,13 @@ const TaskDetailsModal: React.FC<Props> = ({
     setMessage('');
     setSaving(true);
     try {
-      await onSave(title, description, assignedTo, status);
+      await onSave(
+        title,
+        description,
+        assignedTo,
+        status,
+        changedTaskSchedule(schedule, task)
+      );
       setMessage('Task saved.');
     } catch (error: any) {
       setMessage(error.response?.data?.message || 'Unable to save the task.');
@@ -174,6 +192,8 @@ const TaskDetailsModal: React.FC<Props> = ({
               <option value="completed">Completed</option>
             </select>
           </label>
+
+          <TaskScheduleFields value={schedule} onChange={setSchedule} />
 
           <div className="task-images-section">
             <div className="task-images-heading">

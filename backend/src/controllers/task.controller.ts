@@ -8,14 +8,23 @@ import {
 } from '../validators/task.validator';
 
 export const createTask = async (req: AuthRequest, res: Response) => {
-  const { title, description, projectId, assignedTo, status } = req.body;
+  const {
+    title,
+    description,
+    projectId,
+    assignedTo,
+    status,
+    priority,
+    dueDate,
+  } = req.body;
   const task = await TaskService.createTask(
     title,
     description,
     projectId,
     assignedTo,
     (status as TaskStatus) || 'todo',
-    req.user!.userId
+    req.user!.userId,
+    { priority, dueDate }
   );
   res.status(201).json(task);
 };

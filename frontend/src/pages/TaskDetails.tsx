@@ -1,14 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Task, TaskStatus } from '../types/task';
-import { User } from '../types/index';
 import {
-  getTasksByProject,
-  updateTaskStatus,
-  updateTaskDetails,
-} from '../api/tasks';
+  Task,
+  TaskSchedule,
+  TaskStatus,
+  changedTaskSchedule,
+} from '../types/task';
+import { User } from '../types/index';
+import { getTasksByProject, updateTaskDetails } from '../api/tasks';
 import { getProjectById } from '../api/projects';
 import { avatarSource } from '../utils/avatar';
+import TaskScheduleFields from '../components/TaskScheduleFields';
 import './TaskDetails.css';
 
 const STATUSES: TaskStatus[] = [
@@ -48,6 +50,7 @@ const TaskDetails: React.FC = () => {
   const [description, setDescription] = useState('');
   const [assignedTo, setAssignedTo] = useState<string>('');
   const [status, setStatus] = useState<TaskStatus>('todo');
+  const [schedule, setSchedule] = useState<TaskSchedule>({});
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -86,6 +89,10 @@ const TaskDetails: React.FC = () => {
         setStatus(
           foundTask.status === 'done' ? 'code_review' : foundTask.status
         );
+        setSchedule({
+          priority: foundTask.priority,
+          dueDate: foundTask.dueDate,
+        });
       } catch (err) {
         console.error(err);
         setError('Failed to load task details');
@@ -103,19 +110,16 @@ const TaskDetails: React.FC = () => {
 
     setSaving(true);
     try {
-      await updateTaskDetails(taskId, title, description, assignedTo, status);
-      // Update local state to keep everything in sync
-      setTask({
-        ...task,
+      const savedTask = await updateTaskDetails(
+        taskId,
         title,
         description,
-        assignedTo: assignedTo || (task.assignedTo as any),
+        assignedTo,
         status,
-      });
-      // Refresh task to get updated timestamp and potentially other fields from server
-      const refreshedTasks = await getTasksByProject(projectId);
-      const refreshedTask = refreshedTasks.find((t) => t._id === taskId);
-      if (refreshedTask) setTask(refreshedTask);
+        changedTaskSchedule(schedule, task)
+      );
+      setTask(savedTask);
+      setSchedule({ priority: savedTask.priority, dueDate: savedTask.dueDate });
     } catch (err) {
       alert('Failed to save task changes');
     } finally {
@@ -207,6 +211,9 @@ const TaskDetails: React.FC = () => {
 
         <div className="task-details-main-content">
           <div className="task-details-column-left">
+            <section className="task-details-section">
+              <TaskScheduleFields value={schedule} onChange={setSchedule} />
+            </section>
             <section className="task-details-section">
               <label>Description</label>
               <textarea

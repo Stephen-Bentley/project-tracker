@@ -1,5 +1,5 @@
 import api from './api';
-import { Task, TaskStatus } from '../types/task';
+import { Task, TaskSchedule, TaskStatus } from '../types/task';
 
 export const getTasksByProject = async (projectId: string): Promise<Task[]> => {
   const res = await api.get<Task[]>(`/tasks/project/${projectId}`);
@@ -14,13 +14,15 @@ export const createTask = async (
   projectId: string,
   title: string,
   description?: string,
-  assignedTo?: string
+  assignedTo?: string,
+  schedule: TaskSchedule = {}
 ) => {
   const res = await api.post('/tasks', {
     projectId,
     title,
     description,
     assignedTo: assignedTo || null,
+    ...schedule,
   });
 
   return res.data;
@@ -35,13 +37,15 @@ export const updateTaskDetails = async (
   title: string,
   description: string,
   assignedTo: string,
-  status: TaskStatus
+  status: TaskStatus,
+  schedule: TaskSchedule = {}
 ): Promise<Task> => {
   const res = await api.put<Task>(`/tasks/${taskId}`, {
     title,
     description,
     assignedTo: assignedTo || null,
     status,
+    ...schedule,
   });
   return res.data;
 };

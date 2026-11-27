@@ -3,6 +3,34 @@ import { User } from './index';
 export type TaskStatus =
   'todo' | 'in_progress' | 'code_review' | 'completed' | 'done';
 
+export const taskPriorityLabels = {
+  low: 'Low',
+  medium: 'Medium',
+  high: 'High',
+  urgent: 'Urgent',
+};
+
+export type TaskPriority = keyof typeof taskPriorityLabels;
+
+export interface TaskSchedule {
+  priority?: TaskPriority | null;
+  dueDate?: string | null;
+}
+
+export function changedTaskSchedule(
+  value: TaskSchedule,
+  saved: TaskSchedule
+): TaskSchedule {
+  const changes: TaskSchedule = {};
+  if ((value.priority ?? null) !== (saved.priority ?? null)) {
+    changes.priority = value.priority ?? null;
+  }
+  if ((value.dueDate ?? null) !== (saved.dueDate ?? null)) {
+    changes.dueDate = value.dueDate ?? null;
+  }
+  return changes;
+}
+
 export interface TaskImage {
   _id: string;
   filename: string;
@@ -25,7 +53,7 @@ export interface TaskActivity {
   createdAt: string;
 }
 
-export interface Task {
+export interface Task extends TaskSchedule {
   _id: string;
   title: string;
   description?: string;

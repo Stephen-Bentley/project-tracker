@@ -1,5 +1,7 @@
 import React, { FormEvent, useState } from 'react';
 import { User } from '../types';
+import { TaskSchedule } from '../types/task';
+import TaskScheduleFields from './TaskScheduleFields';
 
 interface Props {
   members: User[];
@@ -7,7 +9,8 @@ interface Props {
   onCreate: (
     title: string,
     description: string,
-    assignedTo: string
+    assignedTo: string,
+    schedule: TaskSchedule
   ) => Promise<void>;
 }
 
@@ -15,6 +18,7 @@ const CreateTaskModal: React.FC<Props> = ({ members, onClose, onCreate }) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [assignedTo, setAssignedTo] = useState('');
+  const [schedule, setSchedule] = useState<TaskSchedule>({});
   const [creating, setCreating] = useState(false);
   const [message, setMessage] = useState('');
 
@@ -30,7 +34,7 @@ const CreateTaskModal: React.FC<Props> = ({ members, onClose, onCreate }) => {
     setCreating(true);
 
     try {
-      await onCreate(title.trim(), description.trim(), assignedTo);
+      await onCreate(title.trim(), description.trim(), assignedTo, schedule);
       setMessage('Task created.');
       onClose();
     } catch (error: any) {
@@ -103,6 +107,8 @@ const CreateTaskModal: React.FC<Props> = ({ members, onClose, onCreate }) => {
               ))}
             </select>
           </label>
+
+          <TaskScheduleFields value={schedule} onChange={setSchedule} />
 
           {message && <p className="task-modal-message">{message}</p>}
 

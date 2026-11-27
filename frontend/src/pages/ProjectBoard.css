@@ -489,6 +489,15 @@
   opacity: 0.65;
 }
 
+.task-card-schedule {
+  color: var(--muted);
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 0.81rem;
+  gap: 4px 12px;
+  margin-top: 9px;
+}
+
 @media (max-width: 820px) {
   .board-page {
     padding: 28px 16px;

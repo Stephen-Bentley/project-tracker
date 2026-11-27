@@ -65,6 +65,8 @@ test('shows comments, activity history, and status choices', () => {
   ).toBeInTheDocument();
   expect(screen.getByLabelText('Add a comment')).toBeInTheDocument();
   expect(screen.getByRole('option', { name: 'Completed' })).toBeInTheDocument();
+  expect(screen.getByLabelText('Priority')).toHaveValue('');
+  expect(screen.getByLabelText('Due date')).toHaveValue('');
 });
 
 test('submits a new comment through the modal callback', async () => {
@@ -91,5 +93,67 @@ test('submits a new comment through the modal callback', async () => {
   );
   await waitFor(() =>
     expect(screen.getByText('Comment added.')).toBeInTheDocument()
+  );
+});
+
+test('clears the priority and due date explicitly when editing a ticket', async () => {
+  const onSave = vi.fn().mockResolvedValue(undefined);
+  render(
+    <TaskDetailsModal
+      task={{ ...task, priority: 'high', dueDate: '2026-12-05' }}
+      members={[currentUser]}
+      onClose={vi.fn()}
+      onSave={onSave}
+      onUpload={vi.fn()}
+      onComment={vi.fn()}
+    />
+  );
+
+  expect(screen.getByLabelText('Priority')).toHaveValue('high');
+  expect(screen.getByLabelText('Due date')).toHaveValue('2026-12-05');
+  fireEvent.change(screen.getByLabelText('Priority'), {
+    target: { value: '' },
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'Clear due date' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+
+  await waitFor(() =>
+    expect(onSave).toHaveBeenCalledWith(
+      task.title,
+      task.description,
+      currentUser._id,
+      task.status,
+      {
+        priority: null,
+        dueDate: null,
+      }
+    )
+  );
+});
+
+test('omits both scheduling fields when an existing ticket edit leaves them unchanged', async () => {
+  const onSave = vi.fn().mockResolvedValue(undefined);
+  render(
+    <TaskDetailsModal
+      task={{ ...task, priority: 'high', dueDate: '2026-12-05' }}
+      members={[currentUser]}
+      onClose={vi.fn()}
+      onSave={onSave}
+      onUpload={vi.fn()}
+      onComment={vi.fn()}
+    />
+  );
+  fireEvent.change(screen.getByLabelText('Heading'), {
+    target: { value: 'Updated title' },
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+  await waitFor(() =>
+    expect(onSave).toHaveBeenCalledWith(
+      'Updated title',
+      task.description,
+      currentUser._id,
+      task.status,
+      {}
+    )
   );
 });
