@@ -7,7 +7,7 @@ pipeline {
         timeout(time: 1, unit: 'HOURS')
     }
 
-    triggers { pollSCM('H/5 * * * *') }
+    triggers { pollSCM('H/10 * * * *') }
 
     parameters {
         string(
