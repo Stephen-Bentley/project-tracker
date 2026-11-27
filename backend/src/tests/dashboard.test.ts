@@ -1,75 +1,65 @@
 import request from 'supertest';
-import jwt from 'jsonwebtoken';
 import app from '../app';
-import User from '../models/User';
-import Project from '../models/Project';
-import Task from '../models/Task';
+import { pool } from '../config/db';
+import { ProjectService } from '../services/project.service';
+import { TaskService } from '../services/task.service';
+import { signToken } from '../utils/jwt';
+import { createTestUser } from './fixtures';
 
 describe('Dashboard endpoint', () => {
   it('returns scoped work, summary signals, and recent updates', async () => {
-    const user = await User.create({
-      name: 'Dashboard User',
-      email: 'dashboard@test.com',
-      password: 'password123',
-      role: 'user',
-    });
-    const otherUser = await User.create({
-      name: 'Other User',
-      email: 'other-dashboard@test.com',
-      password: 'password123',
-      role: 'user',
-    });
-    const project = await Project.create({
-      name: 'Personal Project',
-      createdBy: user._id,
-      members: [user._id],
-    });
-    const assigned = await Task.create({
-      title: 'Reply to feedback',
-      project: project._id,
-      assignedTo: user._id,
-      createdBy: user._id,
-      status: 'code_review',
-      comments: [
-        {
-          author: otherUser._id,
-          body: 'Can you check this?',
-          createdAt: new Date(),
-        },
-      ],
-      activities: [
-        {
-          actor: otherUser._id,
-          type: 'comment_added',
-          message: 'Comment added',
-          createdAt: new Date(),
-        },
-      ],
-    });
-    await Task.create({
-      title: 'Closed task',
-      project: project._id,
-      assignedTo: user._id,
-      createdBy: user._id,
-      status: 'completed',
-    });
-    const outsideProject = await Project.create({
-      name: 'Outside Project',
-      createdBy: otherUser._id,
-      members: [otherUser._id],
-    });
-    await Task.create({
-      title: 'Should not appear',
-      project: outsideProject._id,
-      assignedTo: user._id,
-      createdBy: otherUser._id,
-      status: 'todo',
-    });
-
-    const token = jwt.sign(
-      { userId: user._id.toString(), role: 'user' },
-      process.env.JWT_SECRET!
+    const user = await createTestUser('Dashboard User', 'dashboard@test.com');
+    const otherUser = await createTestUser(
+      'Other User',
+      'other-dashboard@test.com'
     );
+    const project = (await ProjectService.createProject(
+      'Personal Project',
+      '',
+      user
+    ))!;
+    await ProjectService.addMember(project._id, otherUser);
+    const assigned = await TaskService.createTask(
+      'Reply to feedback',
+      undefined,
+      project._id,
+      user,
+      'code_review',
+      user
+    );
+    await TaskService.addComment(
+      assigned._id,
+      'Can you check this?',
+      otherUser
+    );
+    await TaskService.createTask(
+      'Closed task',
+      undefined,
+      project._id,
+      user,
+      'completed',
+      user
+    );
+    const outsideProject = (await ProjectService.createProject(
+      'Outside Project',
+      '',
+      otherUser
+    ))!;
+    const outsideTask = await TaskService.createTask(
+      'Should not appear',
+      undefined,
+      outsideProject._id,
+      null,
+      'todo',
+      otherUser
+    );
+    // Simulate a task assigned before the user was removed from that project.
+    await pool.query('UPDATE tasks SET assigned_to = $1 WHERE id = $2', [
+      user,
+      outsideTask._id,
+    ]);
+
+    const token = signToken({ userId: user, role: 'user' });
     const response = await request(app)
       .get('/api/dashboard')
       .set('Authorization', `Bearer ${token}`);
@@ -83,7 +73,7 @@ describe('Dashboard endpoint', () => {
     });
     expect(response.body.activeWork).toHaveLength(1);
     expect(response.body.activeWork[0]).toMatchObject({
-      id: assigned._id.toString(),
+      id: assigned._id,
       projectName: 'Personal Project',
       title: 'Reply to feedback',
       repliesNeeded: true,

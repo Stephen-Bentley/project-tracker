@@ -1,13 +1,11 @@
 import request from 'supertest';
 import app from '../app';
-import mongoose from 'mongoose';
-import User from '../models/User';
-import Project from '../models/Project';
-import Task from '../models/Task';
-import jwt from 'jsonwebtoken';
+import { ProjectService } from '../services/project.service';
+import { TaskService } from '../services/task.service';
+import { signToken } from '../utils/jwt';
+import { createTestUser } from './fixtures';
 
 describe('Security Integration Tests', () => {
-  let adminToken: string;
   let userToken: string;
   let otherUserToken: string;
   let adminId: string;
@@ -17,66 +15,28 @@ describe('Security Integration Tests', () => {
   let taskId: string;
 
   beforeEach(async () => {
-    // Setup users
-    const admin = await User.create({
-      name: 'Admin User',
-      email: 'admin@test.com',
-      password: 'password123',
-      role: 'admin',
-    });
-    adminId = admin._id.toString();
+    adminId = await createTestUser('Admin User', 'admin@test.com', 'admin');
+    userId = await createTestUser('Regular User', 'user@test.com');
+    otherUserId = await createTestUser('Other User', 'other@test.com');
+    userToken = signToken({ userId, role: 'user' });
+    otherUserToken = signToken({ userId: otherUserId, role: 'user' });
 
-    const user = await User.create({
-      name: 'Regular User',
-      email: 'user@test.com',
-      password: 'password123',
-      role: 'user',
-    });
-    userId = user._id.toString();
-
-    const otherUser = await User.create({
-      name: 'Other User',
-      email: 'other@test.com',
-      password: 'password123',
-      role: 'user',
-    });
-    otherUserId = otherUser._id.toString();
-
-    // Generate tokens
-    adminToken = jwt.sign(
-      { userId: adminId, role: 'admin' },
-      process.env.JWT_SECRET!,
-      { expiresIn: '1d' }
+    const project = await ProjectService.createProject(
+      'Test Project',
+      'A test project',
+      adminId
     );
-    userToken = jwt.sign(
-      { userId: userId, role: 'user' },
-      process.env.JWT_SECRET!,
-      { expiresIn: '1d' }
+    projectId = project!._id;
+    await ProjectService.addMember(projectId, userId);
+    const task = await TaskService.createTask(
+      'Initial Task',
+      'Initial Description',
+      projectId,
+      null,
+      'todo',
+      adminId
     );
-    otherUserToken = jwt.sign(
-      { userId: otherUserId, role: 'user' },
-      process.env.JWT_SECRET!,
-      { expiresIn: '1d' }
-    );
-
-    // Setup project
-    const project = await Project.create({
-      name: 'Test Project',
-      description: 'A test project',
-      createdBy: adminId,
-      members: [adminId, userId],
-    });
-    projectId = project._id.toString();
-
-    // Setup task
-    const task = await Task.create({
-      title: 'Initial Task',
-      description: 'Initial Description',
-      project: projectId,
-      status: 'todo',
-      createdBy: adminId,
-    });
-    taskId = task._id.toString();
+    taskId = task._id;
   });
 
   describe('BOLA: Task Creation', () => {
@@ -124,20 +84,31 @@ describe('Security Integration Tests', () => {
     });
 
     it('should prevent non-project member from deleting a task', async () => {
-      // Create a new task for this test
-      const newTask = await Task.create({
-        title: 'Delete Me',
-        project: projectId,
-        status: 'todo',
-        createdBy: adminId,
-      });
-      const newTaskId = newTask._id.toString();
-
       const res = await request(app)
-        .delete(`/api/tasks/${newTaskId}`)
+        .delete(`/api/tasks/${taskId}`)
         .set('Authorization', `Bearer ${otherUserToken}`);
       expect(res.status).toBe(403);
     });
+  });
+
+  it('persists a member’s task update and returns it when the board is read again', async () => {
+    const updated = await request(app)
+      .put(`/api/tasks/${taskId}`)
+      .set('Authorization', `Bearer ${userToken}`)
+      .send({ title: 'Updated task', status: 'in_progress' });
+    expect(updated.status).toBe(200);
+
+    const board = await request(app)
+      .get(`/api/tasks/project/${projectId}`)
+      .set('Authorization', `Bearer ${userToken}`);
+    expect(board.status).toBe(200);
+    expect(board.body).toContainEqual(
+      expect.objectContaining({
+        _id: taskId,
+        title: 'Updated task',
+        status: 'in_progress',
+      })
+    );
   });
 
   describe('BOLA: Task Assignment', () => {

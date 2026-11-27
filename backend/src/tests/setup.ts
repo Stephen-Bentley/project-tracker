@@ -1,26 +1,26 @@
-import { MongoMemoryServer } from 'mongodb-memory-server';
-import mongoose from 'mongoose';
+import { pool } from '../config/db';
 
-let mongod: MongoMemoryServer;
-
-// Set environment variables for tests
-process.env.JWT_SECRET = 'test-secret-key';
-process.env.MONGO_URI = ''; // Will be overridden by memory server
+let verified = false;
 
 beforeAll(async () => {
-  mongod = await MongoMemoryServer.create();
-  const uri = mongod.getUri();
-  await mongoose.connect(uri);
-});
-
-afterAll(async () => {
-  await mongoose.disconnect();
-  await mongod.stop();
+  const identity = await pool.query<{ id: string }>(
+    'SELECT id FROM public.tracker_test_identity'
+  );
+  if (
+    identity.rowCount !== 1 ||
+    identity.rows[0].id !== process.env.TRACKER_TEST_INSTANCE
+  ) {
+    throw new Error(
+      'Refusing to reset a database without the test runner identity.'
+    );
+  }
+  verified = true;
 });
 
 beforeEach(async () => {
-  const collections = mongoose.connection.collections;
-  for (const key in collections) {
-    await collections[key].deleteMany({});
-  }
+  if (!verified)
+    throw new Error('The disposable test database was not verified.');
+  await pool.query('TRUNCATE public.users CASCADE');
 });
+
+afterAll(() => pool.end());
