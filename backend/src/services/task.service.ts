@@ -20,6 +20,7 @@ const labels: Record<TaskStatus, string> = {
   completed: 'Completed',
   done: 'Code review',
 };
+const boardOrder = 'board_position ASC NULLS FIRST, updated_at DESC, id';
 const taskRow = async (id: string) => {
   const result = await pool.query(
     `SELECT t.*, to_char(t.due_date, 'YYYY-MM-DD') AS due_date_text,
@@ -142,7 +143,7 @@ export class TaskService {
       throw domainError('Project not found', 404);
     if (actorId) await assertProjectMember(projectId, actorId);
     const result = await pool.query(
-      'SELECT id FROM tasks WHERE project_id=$1 ORDER BY updated_at DESC',
+      `SELECT id FROM tasks WHERE project_id=$1 ORDER BY ${boardOrder}`,
       [projectId]
     );
     return Promise.all(result.rows.map((row: any) => getExistingTask(row.id)));
@@ -154,6 +155,87 @@ export class TaskService {
     const task = await getExistingTask(taskId);
     await assertTaskMember(task, actorId);
     return task;
+  }
+  static async moveBoardTask(
+    taskId: string,
+    lane: Exclude<TaskStatus, 'done'>,
+    beforeTaskId: string | null,
+    actorId: string
+  ) {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const { rows: tasks } = await client.query<{ project_id: string }>(
+        'SELECT project_id FROM tasks WHERE id = $1',
+        [taskId]
+      );
+      const projectId = tasks[0]?.project_id;
+      if (!projectId) throw domainError('Task not found', 404);
+
+      // A project's drag operations share one lock, including moves in opposite directions.
+      await client.query(
+        'SELECT id FROM projects WHERE id = $1 FOR NO KEY UPDATE',
+        [projectId]
+      );
+      const membership = await client.query(
+        'SELECT 1 FROM project_members WHERE project_id = $1 AND user_id = $2 FOR KEY SHARE',
+        [projectId, actorId]
+      );
+      if (membership.rowCount !== 1)
+        throw domainError('Not a project member', 403);
+      const { rows: moving } = await client.query<{ status: TaskStatus }>(
+        'SELECT status FROM tasks WHERE id = $1 AND project_id = $2 FOR UPDATE',
+        [taskId, projectId]
+      );
+      const previous = moving[0]?.status;
+      if (!previous) throw domainError('Task not found', 404);
+
+      const { rows: destination } = await client.query<{ id: string }>(
+        `SELECT id FROM tasks
+         WHERE project_id = $1 AND id <> $2 AND status = ANY($3::text[])
+         ORDER BY ${boardOrder} FOR UPDATE`,
+        [projectId, taskId, lane === 'code_review' ? [lane, 'done'] : [lane]]
+      );
+      const orderedIds = destination.map(({ id }) => id);
+      const index = beforeTaskId
+        ? orderedIds.indexOf(beforeTaskId)
+        : orderedIds.length;
+      if (index === -1)
+        throw domainError(
+          'The destination changed. Refresh the board and try again.',
+          409
+        );
+      orderedIds.splice(index, 0, taskId);
+      const status =
+        previous === 'done' && lane === 'code_review' ? previous : lane;
+      await client.query(
+        `UPDATE tasks AS t
+         SET board_position = ordered.position,
+             status = CASE WHEN t.id = $2 THEN $3 ELSE t.status END,
+             updated_at = CASE WHEN t.id = $2 AND t.status <> $3 THEN NOW() ELSE t.updated_at END
+         FROM unnest($1::varchar[]) WITH ORDINALITY AS ordered(id, position)
+         WHERE t.id = ordered.id AND t.project_id = $4`,
+        [orderedIds, taskId, status, projectId]
+      );
+      if (status !== previous) {
+        await client.query(
+          'INSERT INTO task_activities (id, task_id, actor_id, type, message, created_at) VALUES ($1,$2,$3,$4,$5,NOW())',
+          [
+            newId(),
+            taskId,
+            actorId,
+            'status_changed',
+            `Status changed from ${labels[previous]} to ${labels[status]}`,
+          ]
+        );
+      }
+      await client.query('COMMIT');
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
   }
   static async updateTask(taskId: string, updates: any, actorId: string) {
     const task = await this.assertMemberForTask(taskId, actorId);
@@ -170,10 +252,14 @@ export class TaskService {
     )
       throw domainError('Target user is not a member of this project', 403);
     await pool.query(
-      `UPDATE tasks SET title=$2, description=$3, assigned_to=$4, status=$5,
-       priority=CASE WHEN $6 THEN $7 ELSE priority END,
-       due_date=CASE WHEN $8 THEN $9::date ELSE due_date END,
-       updated_at=NOW() WHERE id=$1`,
+      `UPDATE tasks SET title=$2, description=$3, assigned_to=$4,
+        board_position=CASE
+          WHEN $5::text IS NOT NULL AND status <> $5
+            AND NOT (status IN ('done', 'code_review') AND $5 IN ('done', 'code_review'))
+          THEN NULL ELSE board_position END,
+        priority=CASE WHEN $6 THEN $7 ELSE priority END,
+        due_date=CASE WHEN $8 THEN $9::date ELSE due_date END,
+        status=COALESCE($5, status), updated_at=NOW() WHERE id=$1`,
       [
         taskId,
         updates.title === undefined ? task.title : updates.title.trim(),
@@ -183,7 +269,7 @@ export class TaskService {
         updates.assignedTo === undefined
           ? task.assignedTo?._id || null
           : updates.assignedTo || null,
-        nextStatus,
+        updates.status ?? null,
         updates.priority !== undefined,
         updates.priority ?? null,
         updates.dueDate !== undefined,

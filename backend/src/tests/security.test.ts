@@ -111,6 +111,40 @@ describe('Security Integration Tests', () => {
     );
   });
 
+  it('keeps the saved lane order when a member edits a card’s schedule', async () => {
+    const other = await TaskService.createTask(
+      'Second card',
+      undefined,
+      projectId,
+      null,
+      'todo',
+      adminId
+    );
+    await request(app)
+      .put(`/api/tasks/${taskId}/position`)
+      .set('Authorization', `Bearer ${userToken}`)
+      .send({ status: 'todo', beforeTaskId: other._id })
+      .expect(204);
+    await request(app)
+      .put(`/api/tasks/${other._id}`)
+      .set('Authorization', `Bearer ${userToken}`)
+      .send({ priority: 'high', dueDate: '2027-01-20' })
+      .expect(200);
+
+    const board = await request(app)
+      .get(`/api/tasks/project/${projectId}`)
+      .set('Authorization', `Bearer ${userToken}`)
+      .expect(200);
+    expect(board.body.map((task: { _id: string }) => task._id)).toEqual([
+      taskId,
+      other._id,
+    ]);
+    expect(board.body[1]).toMatchObject({
+      priority: 'high',
+      dueDate: '2027-01-20',
+    });
+  });
+
   describe('BOLA: Task Assignment', () => {
     it('should allow project member to assign task to another member', async () => {
       const res = await request(app)

@@ -37,6 +37,7 @@ CREATE TABLE IF NOT EXISTS tasks (
   priority TEXT CHECK (priority IN ('low', 'medium', 'high', 'urgent')),
   due_date DATE,
   status TEXT NOT NULL CHECK (status IN ('todo', 'in_progress', 'code_review', 'completed', 'done')),
+  board_position INTEGER,
   created_by VARCHAR(24) NOT NULL REFERENCES users(id),
   created_at TIMESTAMPTZ NOT NULL,
   updated_at TIMESTAMPTZ NOT NULL
