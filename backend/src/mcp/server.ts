@@ -4,6 +4,7 @@ import { ProjectService } from '../services/project.service';
 import { TaskService } from '../services/task.service';
 import { AuthenticatedActor } from '../utils/authentication';
 import { createProjectBodySchema } from '../validators/project.validator';
+import { taskScheduleFields } from '../validators/task.validator';
 
 const objectIdSchema = z
   .string()
@@ -53,6 +54,8 @@ const serializeTask = (task: any) => ({
   id: String(task._id),
   title: task.title,
   description: task.description || undefined,
+  priority: task.priority ?? null,
+  dueDate: task.dueDate ?? null,
   projectId: String(task.project),
   assignedTo: person(task.assignedTo),
   createdBy: person(task.createdBy),
@@ -202,6 +205,7 @@ export const createMcpServer = (actor: AuthenticatedActor) => {
       inputSchema: z
         .object({
           title: z.string().trim().min(1).max(500),
+          ...taskScheduleFields,
           projectId: objectIdSchema,
           description: z.string().max(10000).optional(),
           assignedTo: objectIdSchema.nullable().optional(),
@@ -210,7 +214,15 @@ export const createMcpServer = (actor: AuthenticatedActor) => {
         .strict(),
       annotations: { readOnlyHint: false, idempotentHint: false },
     },
-    async ({ title, projectId, description, assignedTo, status }) =>
+    async ({
+      title,
+      projectId,
+      description,
+      assignedTo,
+      status,
+      priority,
+      dueDate,
+    }) =>
       safeTool(async () => {
         const created = await TaskService.createTask(
           title,
@@ -218,7 +230,8 @@ export const createMcpServer = (actor: AuthenticatedActor) => {
           projectId,
           assignedTo || null,
           status || 'todo',
-          actor.userId
+          actor.userId,
+          { priority, dueDate }
         );
         const task = await getTask(created._id, actor);
         return { task: serializeTask(task) };
@@ -233,6 +246,7 @@ export const createMcpServer = (actor: AuthenticatedActor) => {
       inputSchema: z
         .object({
           taskId: objectIdSchema,
+          ...taskScheduleFields,
           title: z.string().trim().min(1).max(500).optional(),
           description: z.string().max(10000).optional(),
           assignedTo: objectIdSchema.nullable().optional(),

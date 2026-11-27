@@ -8,6 +8,11 @@ import {
   userShape,
 } from './postgres';
 
+interface TaskSchedule {
+  priority?: 'low' | 'medium' | 'high' | 'urgent' | null;
+  dueDate?: string | null;
+}
+
 const labels: Record<TaskStatus, string> = {
   todo: 'To do',
   in_progress: 'In progress',
@@ -17,7 +22,8 @@ const labels: Record<TaskStatus, string> = {
 };
 const taskRow = async (id: string) => {
   const result = await pool.query(
-    `SELECT t.*, row_to_json(a.*) AS assigned_user, row_to_json(c.*) AS creator_user
+    `SELECT t.*, to_char(t.due_date, 'YYYY-MM-DD') AS due_date_text,
+      row_to_json(a.*) AS assigned_user, row_to_json(c.*) AS creator_user
     FROM tasks t LEFT JOIN users a ON a.id=t.assigned_to JOIN users c ON c.id=t.created_by WHERE t.id=$1`,
     [id]
   );
@@ -41,6 +47,8 @@ const taskRow = async (id: string) => {
     _id: row.id,
     title: row.title,
     description: row.description,
+    priority: row.priority,
+    dueDate: row.due_date_text,
     project: row.project_id,
     assignedTo: row.assigned_user ? userShape(row.assigned_user) : null,
     createdBy: userShape(row.creator_user),
@@ -94,7 +102,8 @@ export class TaskService {
     projectId: string,
     assignedTo: string | null,
     status: TaskStatus,
-    creatorId: string
+    creatorId: string,
+    schedule: TaskSchedule = {}
   ) {
     if (!(await getProject(projectId)))
       throw domainError('Project not found', 404);
@@ -111,7 +120,8 @@ export class TaskService {
       throw domainError('Target user is not a member of this project', 403);
     const id = newId();
     await pool.query(
-      'INSERT INTO tasks (id,title,description,project_id,assigned_to,status,created_by,created_at,updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7,NOW(),NOW())',
+      `INSERT INTO tasks (id,title,description,project_id,assigned_to,status,created_by,priority,due_date,created_at,updated_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,NOW(),NOW())`,
       [
         id,
         title.trim(),
@@ -120,6 +130,8 @@ export class TaskService {
         assignedTo,
         status,
         creatorId,
+        schedule.priority ?? null,
+        schedule.dueDate ?? null,
       ]
     );
     await addActivity(id, creatorId, 'created', 'Task created');
@@ -158,7 +170,10 @@ export class TaskService {
     )
       throw domainError('Target user is not a member of this project', 403);
     await pool.query(
-      'UPDATE tasks SET title=$2, description=$3, assigned_to=$4, status=$5, updated_at=NOW() WHERE id=$1',
+      `UPDATE tasks SET title=$2, description=$3, assigned_to=$4, status=$5,
+       priority=CASE WHEN $6 THEN $7 ELSE priority END,
+       due_date=CASE WHEN $8 THEN $9::date ELSE due_date END,
+       updated_at=NOW() WHERE id=$1`,
       [
         taskId,
         updates.title === undefined ? task.title : updates.title.trim(),
@@ -169,6 +184,10 @@ export class TaskService {
           ? task.assignedTo?._id || null
           : updates.assignedTo || null,
         nextStatus,
+        updates.priority !== undefined,
+        updates.priority ?? null,
+        updates.dueDate !== undefined,
+        updates.dueDate ?? null,
       ]
     );
     if (nextStatus !== task.status)
@@ -178,7 +197,12 @@ export class TaskService {
         'status_changed',
         `Status changed from ${labels[task.status as TaskStatus]} to ${labels[nextStatus as TaskStatus]}`
       );
-    if (updates.title !== undefined || updates.description !== undefined)
+    if (
+      updates.title !== undefined ||
+      updates.description !== undefined ||
+      (updates.priority !== undefined && updates.priority !== task.priority) ||
+      (updates.dueDate !== undefined && updates.dueDate !== task.dueDate)
+    )
       await addActivity(
         taskId,
         actorId,

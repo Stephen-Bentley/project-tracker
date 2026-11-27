@@ -13,7 +13,10 @@ const labels: Record<TaskStatus, string> = {
 };
 
 export class DashboardService {
-  static async getDashboard(userId: string) {
+  static async getDashboard(
+    userId: string,
+    today = new Date().toISOString().slice(0, 10)
+  ) {
     const projects = await ProjectService.getProjectsByMember(userId);
     const names = new Map(
       projects
@@ -27,13 +30,28 @@ export class DashboardService {
         activeWork: [],
         todaysFocus: [],
         watchList: [],
+        overdueWork: [],
         recentUpdates: [],
         generatedAt: new Date().toISOString(),
       };
-    const rows = await pool.query(
-      'SELECT id FROM tasks WHERE project_id = ANY($1::varchar[]) AND assigned_to = $2 ORDER BY updated_at DESC',
-      [ids, userId]
-    );
+    const [rows, overdue] = await Promise.all([
+      pool.query(
+        'SELECT id FROM tasks WHERE project_id = ANY($1::varchar[]) AND assigned_to = $2 ORDER BY updated_at DESC',
+        [ids, userId]
+      ),
+      pool.query<{
+        id: string;
+        title: string;
+        project_id: string;
+        due_date: string;
+      }>(
+        `SELECT id, title, project_id, to_char(due_date, 'YYYY-MM-DD') AS due_date
+         FROM tasks WHERE project_id = ANY($1::varchar[])
+           AND due_date < $2::date AND status NOT IN ('completed', 'done')
+         ORDER BY tasks.due_date, id`,
+        [ids, today]
+      ),
+    ]);
     const hydrated = await Promise.all(
       rows.rows.map((row: any) => TaskService.getTask(row.id))
     );
@@ -94,21 +112,26 @@ export class DashboardService {
         repliesNeeded: repliesNeeded.length,
       },
       activeWork: tasks,
-      todaysFocus: focus
-        .slice(0, 3)
-        .map((t) => ({
-          taskId: t.id,
-          projectId: t.projectId,
-          label: t.blocked
-            ? 'Unblock this task'
-            : t.repliesNeeded
-              ? 'Reply to the latest update'
-              : t.inReview
-                ? 'Move the review forward'
-                : 'Keep active work moving',
-          title: t.title,
-          detail: `${t.projectName} · ${labels[t.status as TaskStatus]}`,
-        })),
+      overdueWork: overdue.rows.map((task) => ({
+        taskId: task.id,
+        projectId: task.project_id,
+        projectName: names.get(task.project_id) || '',
+        title: task.title,
+        dueDate: task.due_date,
+      })),
+      todaysFocus: focus.slice(0, 3).map((t) => ({
+        taskId: t.id,
+        projectId: t.projectId,
+        label: t.blocked
+          ? 'Unblock this task'
+          : t.repliesNeeded
+            ? 'Reply to the latest update'
+            : t.inReview
+              ? 'Move the review forward'
+              : 'Keep active work moving',
+        title: t.title,
+        detail: `${t.projectName} · ${labels[t.status as TaskStatus]}`,
+      })),
       watchList: tasks
         .filter((t) => t.blocked || t.repliesNeeded || t.hasComments)
         .slice(0, 4)

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { logoutSession } from '../api/session';
 import { getDashboard } from '../api/dashboard';
 import { DashboardData, DashboardTask } from '../types/dashboard';
+import { formatCalendarDate } from '../utils/calendarDate';
 import './Dashboard.css';
 
 type Filter =
@@ -226,6 +227,17 @@ const Dashboard: React.FC = () => {
             </div>
 
             <aside className="dashboard-side-column">
+              {!!data.overdueWork?.length && (
+                <DashboardList
+                  title="Overdue work"
+                  items={data.overdueWork.map((task) => ({
+                    ...task,
+                    label: `Due ${formatCalendarDate(task.dueDate)}`,
+                    detail: task.projectName,
+                  }))}
+                  onOpen={openTask}
+                />
+              )}
               <DashboardList
                 title="Today's focus"
                 items={data.todaysFocus}

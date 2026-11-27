@@ -1,7 +1,17 @@
 import { z } from 'zod';
 
+export const calendarDateSchema = z.iso
+  .date()
+  .refine((value) => !value.startsWith('0000-'));
+
+export const taskScheduleFields = {
+  priority: z.enum(['low', 'medium', 'high', 'urgent']).nullable().optional(),
+  dueDate: calendarDateSchema.nullable().optional(),
+};
+
 export const createTaskSchema = z.object({
   body: z.object({
+    ...taskScheduleFields,
     title: z.string().min(1, 'Title is required'),
     description: z.string().optional(),
     projectId: z.string().refine((val) => /^[0-9a-fA-F]{24}$/.test(val), {
@@ -28,6 +38,7 @@ export const updateTaskSchema = z.object({
   }),
   body: z
     .object({
+      ...taskScheduleFields,
       title: z.string().optional(),
       description: z.string().optional(),
       status: z

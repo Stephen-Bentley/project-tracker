@@ -25,6 +25,13 @@ export interface DashboardData {
     repliesNeeded: number;
   };
   activeWork: DashboardTask[];
+  overdueWork?: Array<{
+    taskId: string;
+    projectId: string;
+    projectName: string;
+    title: string;
+    dueDate: string;
+  }>;
   todaysFocus: Array<{
     taskId: string;
     projectId: string;

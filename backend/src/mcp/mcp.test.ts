@@ -35,6 +35,8 @@ describe('Project Tracker MCP server', () => {
     _id: taskId,
     title: 'Safe task',
     description: '',
+    priority: null,
+    dueDate: null,
     project: projectId,
     assignedTo: null,
     createdBy: member,
@@ -127,7 +129,12 @@ describe('Project Tracker MCP server', () => {
   });
 
   it('accepts completed tickets for a project created through MCP', async () => {
-    const completedTask = { ...task, status: 'completed' };
+    const completedTask = {
+      ...task,
+      status: 'completed',
+      priority: 'high',
+      dueDate: '2027-01-20',
+    };
     jest.mocked(TaskService.createTask).mockResolvedValue(completedTask);
     jest
       .mocked(TaskService.assertMemberForTask)
@@ -149,11 +156,19 @@ describe('Project Tracker MCP server', () => {
         projectId: createdProject.id,
         title: task.title,
         status: 'completed',
+        priority: 'high',
+        dueDate: '2027-01-20',
       },
     });
 
     expect(result.structuredContent).toMatchObject({
-      task: { id: taskId, projectId, status: 'completed' },
+      task: {
+        id: taskId,
+        projectId,
+        status: 'completed',
+        priority: 'high',
+        dueDate: '2027-01-20',
+      },
     });
     expect(TaskService.createTask).toHaveBeenCalledWith(
       task.title,
@@ -161,7 +176,8 @@ describe('Project Tracker MCP server', () => {
       projectId,
       null,
       'completed',
-      memberId
+      memberId,
+      { priority: 'high', dueDate: '2027-01-20' }
     );
   });
 
