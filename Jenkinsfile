@@ -48,7 +48,7 @@ pipeline {
                 expression { !params.AUTO_DEPLOY }
             }
             steps {
-                input message: 'Deploy Project Tracker to Docker on the homeserver?', ok: 'Deploy'
+                input message: 'Deploy Project Tracker to Docker on the homeserver?', ok: 'Deploy', submitter: 'admin'
             }
         }
 
