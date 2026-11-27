@@ -6,6 +6,11 @@ export const getMyProjects = async (): Promise<Project[]> => {
   return res.data;
 };
 
+export const getAllProjects = async (): Promise<Project[]> => {
+  const res = await api.get<Project[]>('/projects');
+  return res.data;
+};
+
 export const createProject = async (name: string, description?: string) => {
   const res = await api.post<Project>('/projects', { name, description });
   return res.data;

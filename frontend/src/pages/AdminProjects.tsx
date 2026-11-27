@@ -1,8 +1,9 @@
 import React, { FormEvent, useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
   addUserToProject,
   createProject,
-  getMyProjects,
+  getAllProjects,
   removeUserFromProject,
 } from '../api/projects';
 import { createUser, getCurrentUser, getUsers } from '../api/users';
@@ -10,10 +11,10 @@ import { Project } from '../types/projects';
 import { User } from '../types';
 import './AdminProjects.css';
 
-type Tab = 'projects' | 'new-project' | 'new-user';
+type Tab = 'my-projects' | 'all-projects' | 'new-project' | 'new-user';
 
 const AdminProjectsPage: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<Tab>('projects');
+  const [activeTab, setActiveTab] = useState<Tab>('my-projects');
   const [projects, setProjects] = useState<Project[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [currentUserId, setCurrentUserId] = useState('');
@@ -31,8 +32,15 @@ const AdminProjectsPage: React.FC = () => {
   );
   const [memberAction, setMemberAction] = useState('');
 
+  const isMember = (project: Project) =>
+    project.members.some((member) => member._id === currentUserId);
+  const showAllProjects = activeTab === 'all-projects';
+  const visibleProjects = showAllProjects
+    ? projects
+    : projects.filter(isMember);
+
   useEffect(() => {
-    Promise.all([getMyProjects(), getUsers(), getCurrentUser()])
+    Promise.all([getAllProjects(), getUsers(), getCurrentUser()])
       .then(([projectData, userData, currentUser]) => {
         setProjects(projectData);
         setUsers(userData);
@@ -58,7 +66,7 @@ const AdminProjectsPage: React.FC = () => {
       setProjectName('');
       setDescription('');
       setNotice('Project created — you are its first member.');
-      setActiveTab('projects');
+      setActiveTab('my-projects');
     } catch (err: any) {
       setError(err.response?.data?.message || 'Unable to create project.');
     } finally {
@@ -144,10 +152,11 @@ const AdminProjectsPage: React.FC = () => {
     <main className="admin-page">
       <p className="admin-eyebrow">Workspace control</p>
       <h1>Admin tools</h1>
-      <div className="admin-tabs" role="tablist">
+      <div className="admin-tabs" role="group" aria-label="Admin views">
         {(
           [
-            ['projects', 'My Projects'],
+            ['my-projects', 'My Projects'],
+            ['all-projects', 'All Projects'],
             ['new-project', 'Create Project'],
             ['new-user', 'Create User'],
           ] as [Tab, string][]
@@ -155,6 +164,7 @@ const AdminProjectsPage: React.FC = () => {
           <button
             key={tab}
             type="button"
+            aria-pressed={activeTab === tab}
             className={activeTab === tab ? 'active' : ''}
             onClick={() => setActiveTab(tab)}
           >
@@ -162,20 +172,30 @@ const AdminProjectsPage: React.FC = () => {
           </button>
         ))}
       </div>
-      {error && <p className="admin-alert error">{error}</p>}
-      {notice && <p className="admin-alert success">{notice}</p>}
-      {activeTab === 'projects' && (
+      {error && (
+        <p className="admin-alert error" role="alert">
+          {error}
+        </p>
+      )}
+      {notice && (
+        <p className="admin-alert success" role="status">
+          {notice}
+        </p>
+      )}
+      {(activeTab === 'my-projects' || showAllProjects) && (
         <section className="admin-section">
-          <h2>Projects you belong to</h2>
+          <h2>{showAllProjects ? 'All projects' : 'Projects you belong to'}</h2>
           {loading ? (
             <p className="admin-loading">Loading projects...</p>
-          ) : projects.length === 0 ? (
+          ) : visibleProjects.length === 0 ? (
             <p className="admin-empty">
-              You are not a member of any projects yet.
+              {showAllProjects
+                ? 'There are no projects yet.'
+                : 'You are not a member of any projects yet.'}
             </p>
           ) : (
             <div className="admin-grid">
-              {projects.map((project) => (
+              {visibleProjects.map((project) => (
                 <article className="admin-project-card" key={project._id}>
                   <h3>{project.name}</h3>
                   {project.description && <p>{project.description}</p>}
@@ -183,6 +203,15 @@ const AdminProjectsPage: React.FC = () => {
                     {project.members.length} member
                     {project.members.length === 1 ? '' : 's'}
                   </small>
+                  {isMember(project) && (
+                    <Link
+                      className="admin-board-link"
+                      to={`/projects/${project._id}`}
+                      aria-label={`Open board for ${project.name}`}
+                    >
+                      Open board
+                    </Link>
+                  )}
                   <div className="project-members">
                     <strong>Members</strong>
                     <ul>
